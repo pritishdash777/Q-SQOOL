@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight, Atom, BarChart3, BookOpen, Bot, CheckCircle2, ChevronDown,
-  ChevronRight, Clock, Code2, FlaskConical, Flame, FolderOpen,
+  ChevronRight, Clock, Code2, Copy, Download, FlaskConical, Flame, FolderOpen,
   Gauge, GraduationCap, Home, Layers, Lightbulb, Lock, Menu, Plus,
-  Redo2, Save, Search, Send, Settings, Share2, Sparkles, Terminal,
+  Redo2, Save, Search, Send, Settings, Sparkles, Terminal, TriangleAlert,
   Undo2, Upload, Users, Wand2, X, Zap, ZoomIn,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,6 +16,9 @@ type Page = "landing" | "dashboard" | "learning" | "lesson" | "lab" | "code";
 type GateName = "X" | "Y" | "Z" | "H" | "S" | "T" | "RX" | "RY" | "RZ" | "CX" | "CZ" | "M";
 type CircuitGate = { id: number; type: GateName; qubit: number; target?: number; column: number; angle?: number };
 type Circuit = { qubits: number; gates: CircuitGate[] };
+type SDK = "Qiskit" | "Cirq" | "OpenQASM";
+
+const initialCircuit: Circuit = { qubits: 3, gates: [{ id: 1, type: "H", qubit: 0, column: 1 }, { id: 2, type: "CX", qubit: 0, target: 1, column: 3 }] };
 
 const navigation: { id: Page; label: string; icon: typeof Home }[] = [
   { id: "dashboard", label: "Home", icon: Home },
@@ -39,6 +42,50 @@ const gatePalette: { name: GateName; tone: string }[] = [
   { name: "RX", tone: "violet" }, { name: "RY", tone: "violet" }, { name: "RZ", tone: "violet" },
   { name: "CX", tone: "red" }, { name: "CZ", tone: "red" }, { name: "M", tone: "cyan" },
 ];
+
+function generateCode(circuit: Circuit, sdk: SDK) {
+  const gates=[...circuit.gates].sort((a,b)=>a.column-b.column||a.qubit-b.qubit);
+  if(sdk==="Qiskit") return [`from qiskit import QuantumCircuit`,``,`qc = QuantumCircuit(${circuit.qubits}, ${circuit.qubits})`,...gates.map(g=>g.type==="M"?`qc.measure(${g.qubit}, ${g.qubit})`:g.target!==undefined?`qc.${g.type.toLowerCase()}(${g.qubit}, ${g.target})`:g.angle!==undefined?`qc.${g.type.toLowerCase()}(${g.angle.toFixed(3)}, ${g.qubit})`:`qc.${g.type.toLowerCase()}(${g.qubit})`)].join("\n");
+  if(sdk==="Cirq") {
+    const operations=gates.map(g=>g.type==="M"?`cirq.measure(q[${g.qubit}])`:g.type==="CX"?`cirq.CNOT(q[${g.qubit}], q[${g.target}])`:g.type==="CZ"?`cirq.CZ(q[${g.qubit}], q[${g.target}])`:g.angle!==undefined?`cirq.r${g.type[1].toLowerCase()}(${g.angle.toFixed(3)})(q[${g.qubit}])`:`cirq.${g.type}(q[${g.qubit}])`);
+    return [`import cirq`,``,`q = cirq.LineQubit.range(${circuit.qubits})`,`circuit = cirq.Circuit(`,...operations.map(line=>`  ${line},`),`)`].join("\n");
+  }
+  return [`OPENQASM 3;`,`include "stdgates.inc";`,`qubit[${circuit.qubits}] q;`,`bit[${circuit.qubits}] c;`,``,...gates.map(g=>g.type==="M"?`c[${g.qubit}] = measure q[${g.qubit}];`:g.target!==undefined?`${g.type.toLowerCase()} q[${g.qubit}], q[${g.target}];`:g.angle!==undefined?`${g.type.toLowerCase()}(${g.angle.toFixed(3)}) q[${g.qubit}];`:`${g.type.toLowerCase()} q[${g.qubit}];`)].join("\n");
+}
+
+function parseCode(code:string,sdk:SDK):{circuit?:Circuit;warning?:string}{
+  let qubits=0; const gates:CircuitGate[]=[]; const unsupported:string[]=[]; let column=0;
+  const add=(type:string,qubit:string,target?:string,angle?:string)=>{const name=type.toUpperCase().replace("CNOT","CX") as GateName;if(!gatePalette.some(g=>g.name===name)){unsupported.push(type);return;}gates.push({id:Date.now()+column,type:name,qubit:Number(qubit),column:column++,...(target!==undefined?{target:Number(target)}:{}),...(angle!==undefined?{angle:Number(angle)}:{})});};
+  code.split("\n").forEach(raw=>{const line=raw.trim().replace(/,$/,"");if(!line||line.startsWith("#")||line.startsWith("//"))return;let m;
+    if(sdk==="Qiskit"){
+      if((m=line.match(/QuantumCircuit\((\d+)/)))qubits=Number(m[1]);
+      else if((m=line.match(/qc\.(rx|ry|rz)\(([-+\d.eE]+),\s*(\d+)\)/i)))add(m[1],m[3],undefined,m[2]);
+      else if((m=line.match(/qc\.(cx|cz)\((\d+),\s*(\d+)\)/i)))add(m[1],m[2],m[3]);
+      else if((m=line.match(/qc\.(x|y|z|h|s|t)\((\d+)\)/i)))add(m[1],m[2]);
+      else if((m=line.match(/qc\.measure\((\d+),\s*\d+\)/i)))add("M",m[1]);
+      else if(!line.startsWith("from ")&&!line.startsWith("import "))unsupported.push(line);
+    }else if(sdk==="Cirq"){
+      if((m=line.match(/LineQubit\.range\((\d+)\)/)))qubits=Number(m[1]);
+      else if((m=line.match(/cirq\.r([xyz])\(([-+\d.eE]+)\)\(q\[(\d+)\]\)/i)))add(`R${m[1]}`,m[3],undefined,m[2]);
+      else if((m=line.match(/cirq\.(CNOT|CZ)\(q\[(\d+)\],\s*q\[(\d+)\]\)/i)))add(m[1],m[2],m[3]);
+      else if((m=line.match(/cirq\.(X|Y|Z|H|S|T)\(q\[(\d+)\]\)/i)))add(m[1],m[2]);
+      else if((m=line.match(/cirq\.measure\(q\[(\d+)\]\)/i)))add("M",m[1]);
+      else if(!line.startsWith("import ")&&!line.startsWith("circuit =")&&line!==")")unsupported.push(line);
+    }else{
+      if((m=line.match(/qubit\[(\d+)\]/)))qubits=Number(m[1]);
+      else if((m=line.match(/^(rx|ry|rz)\(([-+\d.eE]+)\)\s+q\[(\d+)\];$/i)))add(m[1],m[3],undefined,m[2]);
+      else if((m=line.match(/^(cx|cz)\s+q\[(\d+)\],\s*q\[(\d+)\];$/i)))add(m[1],m[2],m[3]);
+      else if((m=line.match(/^(x|y|z|h|s|t)\s+q\[(\d+)\];$/i)))add(m[1],m[2]);
+      else if((m=line.match(/^c\[\d+\]\s*=\s*measure\s+q\[(\d+)\];$/i)))add("M",m[1]);
+      else if(!line.startsWith("OPENQASM")&&!line.startsWith("include")&&!line.startsWith("bit["))unsupported.push(line);
+    }
+  });
+  if(!qubits)return{warning:"Add a valid qubit or circuit declaration before synchronising."};
+  if(gates.some(g=>g.qubit>=qubits||(g.target??0)>=qubits))return{warning:"A gate references a qubit outside the declared register."};
+  return{circuit:{qubits,gates},warning:unsupported.length?`Unsupported statement${unsupported.length>1?"s":""}: ${unsupported.slice(0,2).join(" · ")}`:undefined};
+}
+
+function highlightedLine(line:string){return line.split(/(\b(?:from|import|QuantumCircuit|qc|cirq|OPENQASM|include|qubit|bit|measure|Circuit|LineQubit|range|CNOT|CX|CZ|RX|RY|RZ|H|X|Y|Z|S|T)\b|[-+]?\d*\.?\d+|#.*|\/\/.*)/g).map((part,i)=><span key={i} className={/^(#|\/\/)/.test(part)?"code-comment":/^[-+]?\d/.test(part)?"code-number":/^[A-Za-z]/.test(part)?"code-keyword":""}>{part}</span>)}
 
 function soon(feature?: string) {
   toast("soon to start", {
@@ -150,9 +197,8 @@ function Lesson({ navigate }: { navigate: (page: Page) => void }) {
 }
 
 
-function Lab({ navigate }: { navigate: (page: Page) => void }) {
-  const initial: Circuit = { qubits: 3, gates: [{ id: 1, type: "H", qubit: 0, column: 1 }, { id: 2, type: "CX", qubit: 0, target: 1, column: 3 }] };
-  const [circuit,setCircuit]=useState<Circuit>(initial), [selectedTool,setSelectedTool]=useState<GateName>("H"), [selectedId,setSelectedId]=useState<number|null>(null), [past,setPast]=useState<Circuit[]>([]), [future,setFuture]=useState<Circuit[]>([]), [aiTab,setAiTab]=useState("Optimise");
+function Lab({ navigate,circuit,setCircuit }: { navigate: (page: Page) => void; circuit:Circuit; setCircuit:React.Dispatch<React.SetStateAction<Circuit>> }) {
+  const [selectedTool,setSelectedTool]=useState<GateName>("H"), [selectedId,setSelectedId]=useState<number|null>(null), [past,setPast]=useState<Circuit[]>([]), [future,setFuture]=useState<Circuit[]>([]), [aiTab,setAiTab]=useState("Optimise");
   const selectedGate=circuit.gates.find(g=>g.id===selectedId), depth=circuit.gates.length?Math.max(...circuit.gates.map(g=>g.column))+1:0, columns=Math.max(14,depth+3);
   const commit=(next:Circuit)=>{setPast(items=>[...items.slice(-29),circuit]);setCircuit(next);setFuture([]);};
   const updateGate=(id:number,patch:Partial<CircuitGate>)=>commit({...circuit,gates:circuit.gates.map(g=>g.id===id?{...g,...patch}:g)});
@@ -172,13 +218,22 @@ function Lab({ navigate }: { navigate: (page: Page) => void }) {
   </div>;
 }
 
-function CodeLab() {
-  const [sdk,setSdk]=useState("Qiskit"); const code=useMemo(()=>sdk==="Qiskit"?`from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(2, 2)\nqc.h(0)\nqc.cx(0, 1)\nqc.measure([0, 1], [0, 1])`:`import cirq\n\nq0, q1 = cirq.LineQubit.range(2)\ncircuit = cirq.Circuit(\n  cirq.H(q0),\n  cirq.CNOT(q0, q1),\n  cirq.measure(q0, q1)\n)`,[sdk]);
-  return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-sm font-semibold tracking-[.15em] text-secondary uppercase">SDK workspace</p><h1 className="glow-text mt-2 text-4xl font-bold sm:text-5xl">Code Lab</h1><p className="mt-3 text-muted-foreground">Write circuits in code and keep them aligned with the visual composer.</p></div><div className="flex gap-2">{["Qiskit","Cirq","OpenQASM"].map(s=><button key={s} onClick={()=>setSdk(s)} className={`rounded-xl border px-4 py-2 text-sm ${sdk===s?"border-primary bg-primary/15 text-primary":"border-border text-muted-foreground"}`}>{s}</button>)}</div></div><div className="mt-8 grid gap-4 lg:grid-cols-[1.1fr_.9fr]"><article className="glass overflow-hidden rounded-2xl"><div className="flex items-center justify-between border-b border-border p-4"><span className="flex items-center gap-2 text-sm"><Code2 className="size-4 text-secondary"/> bell_state.py</span><button onClick={()=>soon("Code execution")} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"><Zap className="size-4"/>Run</button></div><pre className="min-h-[520px] overflow-auto p-6 font-mono text-sm leading-8 text-[#cdd7ff]"><code>{code}</code></pre></article><article className="glass rounded-2xl p-5"><div className="flex items-center justify-between"><h2 className="font-semibold">Visual synchronisation</h2><span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">In sync</span></div><div className="mt-10 space-y-16">{[0,1].map(q=><div key={q} className="grid grid-cols-[40px_1fr] items-center gap-3"><span className="font-mono text-xs text-muted-foreground">q[{q}]</span><div className="circuit-wire active"><span className={`absolute -top-5 grid size-10 place-items-center rounded-lg border ${q===0?"left-[15%] border-blue-400/40 bg-blue-500/20":"left-[48%] border-rose-400/40 bg-rose-500/20"}`}>{q===0?"H":"CX"}</span></div></div>)}</div><div className="mt-20 rounded-xl border border-border bg-black/20 p-4"><p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Console</p><p className="mt-4 font-mono text-sm text-muted-foreground">Ready. Select Run to execute on a simulator.</p></div><button onClick={()=>soon("Visual-to-code sync")} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-secondary/35 p-3 text-sm text-secondary"><Share2 className="size-4"/>Sync from visual composer</button></article></div></div>;
+
+function CodeLab({circuit,setCircuit,navigate}:{circuit:Circuit;setCircuit:React.Dispatch<React.SetStateAction<Circuit>>;navigate:(page:Page)=>void}){
+  const [sdk,setSdk]=useState<SDK>("Qiskit"), [code,setCode]=useState(()=>generateCode(circuit,"Qiskit")), [warning,setWarning]=useState<string>();
+  const selectSdk=(next:SDK)=>{setSdk(next);setCode(generateCode(circuit,next));setWarning(undefined);};
+  const edit=(value:string)=>{setCode(value);const parsed=parseCode(value,sdk);setWarning(parsed.warning);if(parsed.circuit)setCircuit(parsed.circuit);};
+  const refresh=()=>{setCode(generateCode(circuit,sdk));setWarning(undefined);};
+  const copy=async()=>{await navigator.clipboard.writeText(code);toast.success("Code copied");};
+  const download=()=>{const extension=sdk==="Qiskit"?"py":sdk==="Cirq"?"py":"qasm",url=URL.createObjectURL(new Blob([code],{type:"text/plain"})),link=document.createElement("a");link.href=url;link.download=`q-sqool-circuit.${extension}`;link.click();URL.revokeObjectURL(url);};
+  const maxColumn=Math.max(1,...circuit.gates.map(g=>g.column));
+  return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-sm font-semibold tracking-[.15em] text-secondary uppercase">Bidirectional workspace</p><h1 className="glow-text mt-2 text-4xl font-bold sm:text-5xl">Code Lab</h1><p className="mt-3 text-muted-foreground">Edit supported statements and the visual circuit updates immediately.</p></div><div className="flex flex-wrap gap-2">{(["Qiskit","Cirq","OpenQASM"] as SDK[]).map(name=><button key={name} onClick={()=>selectSdk(name)} aria-pressed={sdk===name} className={`rounded-xl border px-4 py-2 text-sm ${sdk===name?"border-primary bg-primary/15 text-primary":"border-border text-muted-foreground"}`}>{name}</button>)}</div></div>
+    <div className="mt-8 grid gap-4 xl:grid-cols-[1.15fr_.85fr]"><article className="glass overflow-hidden rounded-2xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><span className="flex items-center gap-2 text-sm"><Code2 className="size-4 text-secondary"/> q-sqool-circuit.{sdk==="OpenQASM"?"qasm":"py"}</span><div className="flex gap-2"><button onClick={copy} className="code-action"><Copy className="size-4"/>Copy</button><button onClick={download} className="code-action"><Download className="size-4"/>Download</button></div></div><div className="code-editor"><pre className="line-numbers" aria-hidden="true">{code.split("\n").map((_,i)=><span key={i}>{i+1}</span>)}</pre><textarea value={code} onChange={e=>edit(e.target.value)} spellCheck={false} aria-label={`${sdk} circuit code`} className="code-input"/></div><div className="border-t border-border p-4"><p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Syntax-highlighted preview</p><pre className="highlighted-code">{code.split("\n").map((line,i)=><div key={i}>{highlightedLine(line)||" "}</div>)}</pre></div>{warning&&<div role="alert" className="border-t border-amber-400/25 bg-amber-400/8 p-4 text-sm text-amber-200"><TriangleAlert className="mr-2 inline size-4"/>{warning} Supported statements were still synchronised.</div>}</article>
+      <article className="glass rounded-2xl p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">Visual synchronisation</h2><span className={`rounded-full border px-3 py-1 text-xs ${warning?"border-amber-400/30 bg-amber-400/10 text-amber-200":"border-emerald-400/25 bg-emerald-400/10 text-emerald-300"}`}>{warning?"Partially synced":"In sync"}</span></div><div className="mt-10 space-y-10 overflow-x-auto pb-4">{Array.from({length:circuit.qubits},(_,q)=><div key={q} className="grid min-w-[420px] grid-cols-[42px_1fr] items-center gap-3"><span className="font-mono text-xs text-muted-foreground">q[{q}]</span><div className="circuit-wire">{circuit.gates.filter(g=>g.qubit===q).map(g=><span key={g.id} style={{left:`${8+(g.column/Math.max(maxColumn,1))*78}%`}} className={`mini-gate tone-${gatePalette.find(p=>p.name===g.type)?.tone}`}>{g.type}</span>)}{circuit.gates.filter(g=>g.target===q).map(g=><span key={g.id} style={{left:`${8+(g.column/Math.max(maxColumn,1))*78}%`}} className="mini-target"/>)}</div></div>)}</div><div className="mt-10 rounded-xl border border-border bg-black/20 p-4 text-sm text-muted-foreground"><p className="font-semibold text-white">Shared circuit model</p><p className="mt-2">{circuit.qubits} qubits · {circuit.gates.length} gates · {sdk}</p></div><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={refresh} className="rounded-xl border border-secondary/35 p-3 text-sm text-secondary">Generate from visual</button><button onClick={()=>navigate("lab")} className="rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Open Composer</button></div></article></div></div>;
 }
 
 export default function HomePage() {
-  const [page,setPage]=useState<Page>("landing"); const navigate=(next:Page)=>{setPage(next);window.scrollTo({top:0,behavior:"smooth"});};
+  const [page,setPage]=useState<Page>("landing"), [circuit,setCircuit]=useState<Circuit>(initialCircuit); const navigate=(next:Page)=>{setPage(next);window.scrollTo({top:0,behavior:"smooth"});};
   if(page==="landing") return <><Landing navigate={navigate}/><Toaster position="bottom-right" richColors/></>;
-  return <Shell page={page} navigate={navigate}>{page==="dashboard"?<Dashboard navigate={navigate}/>:page==="learning"?<Learning navigate={navigate}/>:page==="lesson"?<Lesson navigate={navigate}/>:page==="lab"?<Lab navigate={navigate}/>:<CodeLab/>}<Toaster position="bottom-right" richColors/></Shell>;
+  return <Shell page={page} navigate={navigate}>{page==="dashboard"?<Dashboard navigate={navigate}/>:page==="learning"?<Learning navigate={navigate}/>:page==="lesson"?<Lesson navigate={navigate}/>:page==="lab"?<Lab navigate={navigate} circuit={circuit} setCircuit={setCircuit}/>:<CodeLab circuit={circuit} setCircuit={setCircuit} navigate={navigate}/>}<Toaster position="bottom-right" richColors/></Shell>;
 }
