@@ -240,6 +240,22 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 @keyframes ai-gate-pulse { to { box-shadow:0 0 25px rgba(252,211,77,.55); transform:translateY(-3px); } }
 @keyframes caret-blink { 50% { opacity:0; } }
 
+.role-card { display:flex; min-height:92px; flex-direction:column; gap:.45rem; border:1px solid var(--border); border-radius:.8rem; padding:1rem; text-align:left; transition:.2s ease; }
+.role-card strong { font-size:.85rem; }
+.role-card span { color:var(--muted-foreground); font-size:.7rem; line-height:1.25rem; }
+.role-card.active { border-color:rgba(67,231,255,.45); background:rgba(67,231,255,.08); box-shadow:0 0 22px rgba(67,231,255,.07); }
+.achievement { border:1px solid rgba(198,167,255,.25); border-radius:999px; background:rgba(198,167,255,.08); padding:.35rem .65rem; color:var(--primary); font-size:.65rem; }
+.achievement.locked { filter:grayscale(1); opacity:.45; }
+.learning-card { border-radius:1rem; padding:1.35rem; transition:.25s ease; }
+.learning-card:hover { transform:translateY(-3px); border-color:rgba(67,231,255,.28); }
+.learning-card.locked { opacity:.55; }
+.algorithm-card { border:1px solid rgba(67,231,255,.16); border-radius:1rem; background:linear-gradient(145deg,rgba(10,26,45,.85),rgba(12,12,32,.8)); padding:1.25rem; }
+.checkpoint { display:grid; width:100%; grid-template-columns:34px 1fr; align-items:center; gap:.8rem; border:1px solid var(--border); border-radius:.8rem; padding:.85rem; color:var(--muted-foreground); text-align:left; transition:.2s ease; }
+.checkpoint > span { display:grid; width:28px; height:28px; place-items:center; border:1px solid var(--border); border-radius:50%; font-size:.7rem; }
+.checkpoint.active { border-color:rgba(67,231,255,.4); background:rgba(67,231,255,.06); color:var(--foreground); }
+.checkpoint.done { border-color:rgba(112,245,189,.25); color:#a7f3d0; }
+.checkpoint:disabled { opacity:.4; }
+
 .orb { position:absolute; border-radius:999px; border:1px solid rgba(202,180,255,.24); animation: orbit-float 7s ease-in-out infinite; }
 .orb::after { content:""; position:absolute; width:6px; height:6px; border-radius:50%; background:#51e8ff; box-shadow:0 0 16px #51e8ff; top:8%; left:58%; }
 
