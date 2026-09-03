@@ -226,6 +226,20 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 .step-control { border:1px solid var(--border); border-radius:.6rem; padding:.55rem .8rem; color:var(--foreground); font-size:.75rem; }
 .step-control:disabled { opacity:.3; }
 
+.circuit-gate.ai-highlight { animation:ai-gate-pulse 1s ease-in-out infinite alternate; border-color:#fcd34d; }
+.ai-response { border:1px solid rgba(67,231,255,.22); border-radius:.9rem; background:rgba(67,231,255,.045); padding:1rem; }
+.stream-caret { display:inline-block; width:2px; height:1em; margin-left:3px; vertical-align:-2px; background:var(--secondary); animation:caret-blink .7s steps(1) infinite; }
+.ai-label { margin-bottom:.35rem; color:var(--muted-foreground); font-size:.65rem; text-transform:uppercase; letter-spacing:.08em; }
+.ai-circuit-strip { display:flex; min-height:48px; gap:.35rem; overflow-x:auto; border:1px solid var(--border); border-radius:.65rem; padding:.45rem; }
+.ai-circuit-strip span { display:grid; min-width:38px; place-items:center; border:1px solid rgba(198,167,255,.35); border-radius:.45rem; background:rgba(198,167,255,.1); font:11px var(--font-mono); }
+.ai-circuit-strip small { color:var(--muted-foreground); font-size:.55rem; }
+.ai-circuit-strip em { align-self:center; color:var(--muted-foreground); font-size:.7rem; }
+.ai-action { border:1px solid var(--border); border-radius:.55rem; padding:.5rem .35rem; color:var(--muted-foreground); font-size:.7rem; }
+.ai-action.primary { border-color:rgba(67,231,255,.35); background:rgba(67,231,255,.1); color:var(--secondary); }
+.ai-action:disabled { cursor:not-allowed; opacity:.3; }
+@keyframes ai-gate-pulse { to { box-shadow:0 0 25px rgba(252,211,77,.55); transform:translateY(-3px); } }
+@keyframes caret-blink { 50% { opacity:0; } }
+
 .orb { position:absolute; border-radius:999px; border:1px solid rgba(202,180,255,.24); animation: orbit-float 7s ease-in-out infinite; }
 .orb::after { content:""; position:absolute; width:6px; height:6px; border-radius:50%; background:#51e8ff; box-shadow:0 0 16px #51e8ff; top:8%; left:58%; }
 
