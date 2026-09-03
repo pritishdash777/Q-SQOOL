@@ -1,5 +1,4 @@
-import { QuantumPlayground } from '../../components/circuit/QuantumPlayground';
-
+import { QuantumPlayground } from "@/components/ui/circuits/QuantumPlayground";
 export default function PlaygroundPage() {
   return (
     <main className="min-h-screen bg-background p-8">
