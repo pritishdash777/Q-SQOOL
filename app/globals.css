@@ -2,11 +2,11 @@
 @import "../node_modules/tw-animate-css/dist/tw-animate.css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
-@utility scrollbar-thin {
+.scrollbar-thin {
   scrollbar-width: thin;
 }
 
-@utility scrollbar-none {
+.scrollbar-none {
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -14,7 +14,7 @@
   }
 }
 
-@utility scrollbar-gutter-stable {
+.scrollbar-gutter-stable {
   scrollbar-gutter: stable;
 }
 
@@ -53,6 +53,7 @@
   --sidebar-ring: #43e7ff;
 }
 
+/* Tailwind CSS v4 directive; processed by Tailwind during the build. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -187,6 +188,17 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 .code-comment { color:#69738e; font-style:italic; }
 .mini-gate { position:absolute; top:-20px; display:grid; min-width:38px; height:40px; place-items:center; transform:translateX(-50%); border:1px solid rgba(198,167,255,.5); border-radius:8px; font:11px var(--font-mono); }
 .mini-target { position:absolute; top:-6px; width:12px; height:12px; transform:translateX(-50%); border:3px solid var(--secondary); border-radius:50%; background:var(--background); }
+
+.run-status { display:inline-flex; align-items:center; gap:.45rem; border:1px solid var(--border); border-radius:999px; padding:.35rem .7rem; color:var(--muted-foreground); font-size:.7rem; text-transform:capitalize; }
+.run-status span { width:7px; height:7px; border-radius:50%; background:currentColor; }
+.status-queued { color:#fcd34d; border-color:rgba(252,211,77,.3); }
+.status-running { color:var(--secondary); border-color:rgba(67,231,255,.3); }
+.status-completed { color:#70f5bd; border-color:rgba(112,245,189,.3); }
+.status-failed { color:#fda4af; border-color:rgba(253,164,175,.3); }
+.simulation-result { min-height:285px; border:1px solid var(--border); border-radius:.9rem; background:rgba(0,0,0,.18); padding:1.25rem; }
+.empty-state { display:flex; min-height:240px; flex-direction:column; align-items:center; justify-content:center; gap:1rem; color:var(--muted-foreground); text-align:center; }
+.result-bar { width:100%; min-height:3px; border-radius:.55rem .55rem .15rem .15rem; background:linear-gradient(to top,rgba(198,167,255,.28),var(--secondary)); box-shadow:0 0 20px rgba(67,231,255,.15); animation:bar-rise .55s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes bar-rise { from { height:0; opacity:.2; } }
 
 .orb { position:absolute; border-radius:999px; border:1px solid rgba(202,180,255,.24); animation: orbit-float 7s ease-in-out infinite; }
 .orb::after { content:""; position:absolute; width:6px; height:6px; border-radius:50%; background:#51e8ff; box-shadow:0 0 16px #51e8ff; top:8%; left:58%; }
