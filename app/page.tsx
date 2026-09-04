@@ -163,6 +163,165 @@ function Brand({ compact = false, goHome }: { compact?: boolean; goHome: () => v
 
 function Ambient() { return <><div className="aurora" /><div className="noise" /></>; }
 
+function QuantumIntro({ onComplete }: { onComplete: () => void }) {
+  const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    const closeTimer = window.setTimeout(
+      () => setClosing(true),
+      reducedMotion ? 100 : 3400
+    );
+
+    const finishTimer = window.setTimeout(
+      onComplete,
+      reducedMotion ? 250 : 4200
+    );
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.clearTimeout(closeTimer);
+      window.clearTimeout(finishTimer);
+      document.body.style.overflow = "";
+    };
+  }, [onComplete]);
+
+  const skip = () => {
+    setClosing(true);
+    window.setTimeout(onComplete, 650);
+  };
+
+  return (
+    <div
+      className={`quantum-intro ${closing ? "quantum-intro-exit" : ""}`}
+      role="dialog"
+      aria-label="Q-SQOOL introduction"
+    >
+      <div className="intro-grid" />
+      <div className="intro-aurora intro-aurora-one" />
+      <div className="intro-aurora intro-aurora-two" />
+
+      <div className="intro-particles" aria-hidden="true">
+        {Array.from({ length: 20 }, (_, index) => (
+          <span
+            key={index}
+            style={{
+              left: `${7 + ((index * 23) % 88)}%`,
+              top: `${8 + ((index * 37) % 80)}%`,
+              animationDelay: `${index * 85}ms`,
+            }}
+          />
+        ))}
+      </div>
+
+      <svg
+        className="intro-circuit"
+        viewBox="0 0 1000 500"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="intro-line-gradient" x1="0" x2="1">
+            <stop offset="0%" stopColor="#9867ff" stopOpacity="0" />
+            <stop offset="35%" stopColor="#c4a7ff" />
+            <stop offset="70%" stopColor="#43e7ff" />
+            <stop offset="100%" stopColor="#43e7ff" stopOpacity="0" />
+          </linearGradient>
+
+          <filter id="intro-glow">
+            <feGaussianBlur stdDeviation="5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {[125, 210, 295, 380].map((y, index) => (
+          <g key={y}>
+            <path
+              className="intro-circuit-line"
+              style={{ animationDelay: `${300 + index * 140}ms` }}
+              d={`M40 ${y} H960`}
+              stroke="url(#intro-line-gradient)"
+            />
+
+            <circle
+              className="intro-wire-pulse"
+              style={{ animationDelay: `${1100 + index * 190}ms` }}
+              cx="45"
+              cy={y}
+              r="5"
+            />
+          </g>
+        ))}
+
+        <g className="intro-gate intro-gate-h">
+          <rect x="235" y="92" width="66" height="66" rx="13" />
+          <text x="268" y="135">H</text>
+        </g>
+
+        <g className="intro-gate intro-gate-x">
+          <rect x="400" y="177" width="66" height="66" rx="13" />
+          <text x="433" y="220">X</text>
+        </g>
+
+        <g className="intro-controlled-gate">
+          <line x1="590" y1="210" x2="590" y2="380" />
+          <circle cx="590" cy="210" r="10" />
+          <circle cx="590" cy="380" r="27" />
+          <line x1="574" y1="380" x2="606" y2="380" />
+          <line x1="590" y1="364" x2="590" y2="396" />
+        </g>
+
+        <g className="intro-gate intro-gate-m">
+          <rect x="755" y="262" width="70" height="66" rx="13" />
+          <path d="M770 306 A20 20 0 0 1 810 306" />
+          <line x1="790" y1="306" x2="805" y2="287" />
+        </g>
+      </svg>
+
+      <div className="intro-brand">
+        <div className="intro-atom">
+          <span className="intro-orbit intro-orbit-one" />
+          <span className="intro-orbit intro-orbit-two" />
+          <span className="intro-orbit intro-orbit-three" />
+          <span className="intro-nucleus" />
+        </div>
+
+        <p className="intro-system-label">
+          Quantum learning environment initializing
+        </p>
+
+        <h1 className="intro-title" data-text="Q-SQOOL">
+          Q-SQOOL
+        </h1>
+
+        <p className="intro-tagline">
+          Learn Quantum. Build Circuits. Shape the Future.
+        </p>
+
+        <div className="intro-progress">
+          <span />
+        </div>
+
+        <div className="intro-status">
+          <span>Preparing qubits</span>
+          <span>Building circuit</span>
+          <span>System ready</span>
+        </div>
+      </div>
+
+      <button className="intro-skip" onClick={skip}>
+        Skip intro
+      </button>
+    </div>
+  );
+}
+
 function Landing({ navigate }: { navigate: (page: Page) => void }) {
   return (
     <main className="quantum-grid min-h-screen overflow-hidden">
@@ -370,12 +529,34 @@ function RouteOverview({ page, openLesson, tryModule, navigate }: { page: "algor
 
 export default function HomePage() {
   const pathname = usePathname(), router = useRouter();
+  const [showIntro, setShowIntro] = useState(true);
   const page: Page = pathname === "/" ? "landing" : pathname === "/dashboard" ? "dashboard" : pathname === "/learn" ? "learning" : pathname.startsWith("/learn/") || pathname.startsWith("/algorithms/") ? "lesson" : pathname === "/algorithms" ? "algorithms" : pathname === "/composer" ? "lab" : pathname === "/code-lab" ? "code" : pathname === "/projects" ? "projects" : pathname === "/challenges" ? "challenges" : "profile";
   const activeLesson = decodeURIComponent(pathname.split("/").filter(Boolean).at(-1) ?? "entanglement");
   const [circuit, setCircuit] = useState<Circuit>(() => { if (typeof window === "undefined") return initialCircuit; try { return JSON.parse(localStorage.getItem("q-sqool-circuit") ?? "") as Circuit } catch { return initialCircuit } });
-  useEffect(() => { localStorage.setItem("q-sqool-circuit", JSON.stringify(circuit)) }, [circuit]);
+  useEffect(() => {
+  if (
+    pathname !== "/" ||
+    sessionStorage.getItem("q-sqool-intro-seen") === "true"
+  ) {
+    setShowIntro(false);
+  }
+}, [pathname]);
+
+const finishIntro = () => {
+  sessionStorage.setItem("q-sqool-intro-seen", "true");
+  setShowIntro(false);
+};
+useEffect(() => { localStorage.setItem("q-sqool-circuit", JSON.stringify(circuit)) }, [circuit]);
   const navigate = (next: Page) => { router.push(next === "lesson" ? "/learn/entanglement" : pagePaths[next as Exclude<Page, "lesson">]); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const openLesson = (id: string) => router.push(`${learningModules.find(m => m.id === id)?.category === "Foundation" ? "/learn" : "/algorithms"}/${id}`), tryModule = (id: string) => { setCircuit(starterCircuit(id)); router.push(`/composer?starter=${encodeURIComponent(id)}`); };
-  if (page === "landing") return <><Landing navigate={navigate} /><Toaster position="bottom-right" richColors /></>;
+ if (page === "landing") {
+  return (
+    <>
+      {showIntro && <QuantumIntro onComplete={finishIntro} />}
+      <Landing navigate={navigate} />
+      <Toaster position="bottom-right" richColors />
+    </>
+  );
+}
   return <Shell page={page} navigate={navigate}>{page === "dashboard" ? <Dashboard navigate={navigate} /> : page === "learning" ? <Learning openLesson={openLesson} tryModule={tryModule} /> : page === "lesson" ? <Lesson module={learningModules.find(m => m.id === activeLesson) ?? learningModules[0]} navigate={navigate} setCircuit={setCircuit} /> : page === "lab" ? <Lab navigate={navigate} circuit={circuit} setCircuit={setCircuit} /> : page === "code" ? <CodeLab circuit={circuit} setCircuit={setCircuit} navigate={navigate} /> : page === "projects" ? <ProjectsWorkspace circuit={circuit} setCircuit={setCircuit} navigate={navigate} /> : <RouteOverview page={page as "algorithms" | "challenges" | "profile"} openLesson={openLesson} tryModule={tryModule} navigate={navigate} />}<Toaster position="bottom-right" richColors /></Shell>;
 }
