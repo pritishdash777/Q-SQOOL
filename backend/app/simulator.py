@@ -1,4 +1,6 @@
+from __future__ import annotations
 import time
+from typing import Optional
 
 from qiskit import QuantumCircuit
 from qiskit_aer import AerSimulator
@@ -15,7 +17,7 @@ class SimulationError(Exception):
         self,
         code: str,
         message: str,
-        gate_id: int | None = None,
+        gate_id: Optional[int] = None,
     ):
         self.code = code
         self.message = message

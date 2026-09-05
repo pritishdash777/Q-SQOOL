@@ -13,19 +13,8 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Progress } from "@/components/ui/progress";
 
-type Page = "landing" | "dashboard" | "learning" | "lesson" | "algorithms" | "lab" | "code" | "projects" | "challenges" | "profile";
-type GateName = "X" | "Y" | "Z" | "H" | "S" | "T" | "RX" | "RY" | "RZ" | "CX" | "CZ" | "M";
-type CircuitGate = { id: number; type: GateName; qubit: number; target?: number; column: number; angle?: number };
-type Circuit = { qubits: number; gates: CircuitGate[] };
-type SDK = "Qiskit" | "Cirq" | "OpenQASM";
-type RunState = "initial" | "queued" | "running" | "completed" | "failed";
-type DemoResult = { name: string; probabilities: Record<string, number>; note: string };
-type ResultsTab = "Histogram" | "Probabilities" | "Statevector" | "Phase" | "Bloch sphere" | "Density matrix" | "Execution stepper";
-type AIMode = "Optimise" | "Explain" | "Detect Errors";
-type AILevel = "Beginner" | "Technical";
-type AIAnalysis = { title: string; text: string; gateIds: number[]; before: Circuit; after: Circuit; warning?: string };
-type ProjectVersion = { id: number; savedAt: string; circuit: Circuit };
-type LocalProject = { id: number; name: string; updatedAt: string; circuit: Circuit; versions: ProjectVersion[] };
+import { Page, GateName, CircuitGate, Circuit, SDK, RunState, DemoResult, ResultsTab, AIMode, AILevel, AIAnalysis, ProjectVersion, LocalProject } from "../lib/quantum-types";
+import { checkHealth, simulateCircuit, optimizeCircuit } from "../lib/api";
 
 const initialCircuit: Circuit = { qubits: 3, gates: [{ id: 1, type: "H", qubit: 0, column: 1 }, { id: 2, type: "CX", qubit: 0, target: 1, column: 3 }] };
 
@@ -428,12 +417,41 @@ function Lesson({ module, navigate, setCircuit }: { module: LearningModule; navi
 function AICopilot({ circuit, onApply, onHighlight }: { circuit: Circuit; onApply: (next: Circuit) => void; onHighlight: (ids: number[]) => void }) {
   const [mode, setMode] = useState<AIMode>("Optimise"), [level, setLevel] = useState<AILevel>("Beginner"), [analysis, setAnalysis] = useState<AIAnalysis>(), [stream, setStream] = useState(""), [busy, setBusy] = useState(false), [preview, setPreview] = useState(false), timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
-  const run = () => { if (timer.current) clearInterval(timer.current); const next = analyseCircuit(circuit, mode, level); setAnalysis(next); setPreview(false); setStream(""); setBusy(true); onHighlight(next.gateIds); let i = 0; timer.current = setInterval(() => { i += 3; setStream(next.text.slice(0, i)); if (i >= next.text.length) { if (timer.current) clearInterval(timer.current); setBusy(false); } }, 22); };
+  const run = async () => { 
+    if (timer.current) clearInterval(timer.current); 
+    setAnalysis(undefined); setPreview(false); setStream(""); setBusy(true); onHighlight([]); 
+    
+    let next: AIAnalysis;
+    if (mode === "Optimise") {
+      const isHealthy = await checkHealth();
+      if (isHealthy) {
+        try {
+          const res = await optimizeCircuit(circuit);
+          next = { ...res, title: `${res.title} (Backend)` };
+        } catch (err: any) {
+          toast.error(err.message || "Optimization failed");
+          setBusy(false);
+          return;
+        }
+      } else {
+        next = { ...analyseCircuit(circuit, mode, level), title: "Demo Mode: Optimise" };
+      }
+    } else {
+      next = { ...analyseCircuit(circuit, mode, level), title: `Demo Mode: ${mode}` };
+    }
+    
+    setAnalysis(next); onHighlight(next.gateIds); 
+    let i = 0; 
+    timer.current = setInterval(() => { 
+      i += 3; setStream(next.text.slice(0, i)); 
+      if (i >= next.text.length) { if (timer.current) clearInterval(timer.current); setBusy(false); } 
+    }, 22); 
+  };
   const dismiss = () => { if (timer.current) clearInterval(timer.current); setBusy(false); setAnalysis(undefined); setStream(""); setPreview(false); onHighlight([]); };
-  const apply = () => { if (!analysis) return; onApply(analysis.after); toast.success("Demo-mode suggestion applied"); dismiss(); };
-  const changed = analysis && analysis.before.gates.length !== analysis.after.gates.length, reduction = analysis && analysis.before.gates.length ? Math.round((1 - analysis.after.gates.length / analysis.before.gates.length) * 100) : 0;
+  const apply = () => { if (!analysis) return; onApply(analysis.after); toast.success("Circuit updated"); dismiss(); };
+  const changed = analysis && analysis.before.gates.length !== analysis.after.gates.length, reduction = analysis?.reductionPercent ?? (analysis && analysis.before.gates.length ? Math.round((1 - analysis.after.gates.length / analysis.before.gates.length) * 100) : 0);
   const strip = (value: Circuit) => <div className="ai-circuit-strip">{[...value.gates].sort((a, b) => a.column - b.column).map(g => <span key={g.id}>{g.type}<small>q{g.qubit}</small></span>)}{!value.gates.length && <em>Empty circuit</em>}</div>;
-  return <aside className="glass flex min-h-[620px] flex-col rounded-2xl"><div className="flex items-center gap-3 border-b border-border p-5"><Bot className="size-5 text-secondary" /><div><p className="font-semibold">AI Copilot Demo</p><p className="text-xs text-muted-foreground">Deterministic circuit guidance</p></div></div><div className="grid grid-cols-3 border-b border-border">{(["Optimise", "Explain", "Detect Errors"] as AIMode[]).map(name => <button key={name} onClick={() => { setMode(name); dismiss(); }} className={`p-3 text-xs ${mode === name ? "border-b-2 border-secondary bg-secondary/5 text-secondary" : "text-muted-foreground"}`}>{name}</button>)}</div><div className="p-4"><div className="grid grid-cols-2 gap-2">{(["Beginner", "Technical"] as AILevel[]).map(name => <button key={name} onClick={() => setLevel(name)} aria-pressed={level === name} className={`rounded-lg border p-2 text-xs ${level === name ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{name}</button>)}</div><button onClick={run} disabled={busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-secondary p-3 text-sm font-semibold text-secondary-foreground disabled:opacity-50"><Sparkles className="size-4" />{busy ? "Analysing…" : `${mode} circuit`}</button></div><div className="flex-1 px-4 pb-4">{!analysis ? <div className="rounded-xl border border-dashed border-border p-5 text-center text-sm leading-6 text-muted-foreground">Choose a mode and run the local AI demonstration.</div> : <div className="ai-response"><p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200">AI-generated suggestion—verify before use</p><h3 className="mt-3 font-semibold">{analysis.title}</h3><p className="mt-3 min-h-16 text-sm leading-6 text-muted-foreground">{stream}{busy && <span className="stream-caret" />}</p>{analysis.warning && <p className="mt-3 rounded-lg border border-amber-400/25 bg-amber-400/8 p-3 text-xs leading-5 text-amber-200"><TriangleAlert className="mr-1 inline size-3" />{analysis.warning}</p>}{preview && <div className="mt-4 space-y-3"><div><p className="ai-label">Before · {analysis.before.gates.length} gates</p>{strip(analysis.before)}</div><div><p className="ai-label">After · {analysis.after.gates.length} gates</p>{strip(analysis.after)}</div><p className="text-xs text-secondary">Estimated reduction: {Math.max(0, reduction)}%</p></div>}<div className="mt-4 grid grid-cols-3 gap-2"><button onClick={() => setPreview(true)} className="ai-action">Preview</button><button onClick={apply} disabled={!changed} className="ai-action primary">Apply</button><button onClick={dismiss} className="ai-action">Dismiss</button></div></div>}</div></aside>;
+  return <aside className="glass flex min-h-[620px] flex-col rounded-2xl"><div className="flex items-center gap-3 border-b border-border p-5"><Bot className="size-5 text-secondary" /><div><p className="font-semibold">AI Copilot Demo</p><p className="text-xs text-muted-foreground">Circuit guidance and optimization</p></div></div><div className="grid grid-cols-3 border-b border-border">{(["Optimise", "Explain", "Detect Errors"] as AIMode[]).map(name => <button key={name} onClick={() => { setMode(name); dismiss(); }} className={`p-3 text-xs ${mode === name ? "border-b-2 border-secondary bg-secondary/5 text-secondary" : "text-muted-foreground"}`}>{name}</button>)}</div><div className="p-4"><div className="grid grid-cols-2 gap-2">{(["Beginner", "Technical"] as AILevel[]).map(name => <button key={name} onClick={() => setLevel(name)} aria-pressed={level === name} className={`rounded-lg border p-2 text-xs ${level === name ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{name}</button>)}</div><button onClick={run} disabled={busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-secondary p-3 text-sm font-semibold text-secondary-foreground disabled:opacity-50"><Sparkles className="size-4" />{busy ? "Analysing…" : `${mode} circuit`}</button></div><div className="flex-1 px-4 pb-4">{!analysis ? <div className="rounded-xl border border-dashed border-border p-5 text-center text-sm leading-6 text-muted-foreground">Choose a mode and run the AI Copilot.</div> : <div className="ai-response"><p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200">AI-generated suggestion—verify before use</p><h3 className="mt-3 font-semibold">{analysis.title}</h3><p className="mt-3 min-h-16 text-sm leading-6 text-muted-foreground">{stream}{busy && <span className="stream-caret" />}</p>{analysis.warning && <p className="mt-3 rounded-lg border border-amber-400/25 bg-amber-400/8 p-3 text-xs leading-5 text-amber-200"><TriangleAlert className="mr-1 inline size-3" />{analysis.warning}</p>}{preview && <div className="mt-4 space-y-3"><div><p className="ai-label">Before · {analysis.before.gates.length} gates</p>{strip(analysis.before)}</div><div><p className="ai-label">After · {analysis.after.gates.length} gates</p>{strip(analysis.after)}</div><p className="text-xs text-secondary">Estimated reduction: {Math.max(0, reduction)}%</p></div>}<div className="mt-4 grid grid-cols-3 gap-2"><button onClick={() => setPreview(true)} className="ai-action">Preview</button><button onClick={apply} disabled={!changed} className="ai-action primary">Apply</button><button onClick={dismiss} className="ai-action">Dismiss</button></div></div>}</div></aside>;
 }
 
 function ResultsWorkspace({ result, circuit, shots }: { result: DemoResult; circuit: Circuit; shots: number }) {
@@ -454,12 +472,50 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
   const [simulator, setSimulator] = useState("Local statevector"), [shots, setShots] = useState(1024), [noise, setNoise] = useState("Ideal"), [status, setStatus] = useState<RunState>("initial"), [result, setResult] = useState<DemoResult>(), timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stopTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   useEffect(() => () => stopTimers(), []);
-  const run = () => { stopTimers(); setResult(undefined); if (!circuit.gates.length) { setStatus("failed"); return; } setStatus("queued"); timers.current = [setTimeout(() => setStatus("running"), 500), setTimeout(() => { setResult(recogniseCircuit(circuit)); setStatus("completed"); }, 1650)]; };
+  const run = async () => { 
+    stopTimers(); setResult(undefined); 
+    if (!circuit.gates.length) { setStatus("failed"); return; } 
+    setStatus("queued"); 
+    
+    const isHealthy = await checkHealth();
+    
+    if (isHealthy) {
+      setStatus("running");
+      try {
+        const res = await simulateCircuit(circuit, shots);
+        setResult({
+          name: res.name || "Quantum circuit",
+          probabilities: res.probabilities || {},
+          counts: res.counts,
+          executionMs: res.executionMs,
+          simulator: res.simulator || "qiskit_aer",
+          note: res.note || "Backend execution successful."
+        });
+        setStatus("completed");
+      } catch (err: any) {
+        toast.error(err.message || "Simulation failed");
+        setStatus("failed");
+      }
+    } else {
+      timers.current = [
+        setTimeout(() => setStatus("running"), 500), 
+        setTimeout(() => { 
+          const demoResult = recogniseCircuit(circuit);
+          setResult({ ...demoResult, note: "Demo Mode: " + demoResult.note }); 
+          setStatus("completed"); 
+        }, 1650)
+      ];
+    }
+  };
   const cancel = () => { stopTimers(); setStatus("initial"); setResult(undefined); };
-  const progress = status === "queued" ? 22 : status === "running" ? 68 : status === "completed" ? 100 : 0, executionMs = Math.round(35 + circuit.gates.length * 7 + shots / 64 + (noise === "Ideal" ? 0 : 18));
-  return <section id="simulation-workspace" className="glass mt-3 scroll-mt-24 overflow-hidden rounded-2xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><div className="flex items-center gap-3"><h2 className="text-lg font-semibold">Simulation workspace</h2><span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs text-amber-200">Demo simulation</span></div><p className="mt-1 text-xs text-muted-foreground">Deterministic frontend results—no quantum backend is being executed.</p></div><span className={`run-status status-${status}`}><span />{status}</span></div>
-    <div className="grid gap-5 p-5 lg:grid-cols-[.8fr_1.2fr]"><div><div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1"><label className="text-xs text-muted-foreground">Simulator<select value={simulator} onChange={e => setSimulator(e.target.value)} disabled={status === "queued" || status === "running"} className="inspector-input"><option>Local statevector</option><option>Local shot sampler</option><option>Educational noisy model</option></select></label><label className="text-xs text-muted-foreground">Number of shots<select value={shots} onChange={e => setShots(Number(e.target.value))} disabled={status === "queued" || status === "running"} className="inspector-input">{[128, 512, 1024, 2048, 4096].map(value => <option key={value}>{value}</option>)}</select></label><label className="text-xs text-muted-foreground">Noise model<select value={noise} onChange={e => setNoise(e.target.value)} disabled={status === "queued" || status === "running"} className="inspector-input"><option>Ideal</option><option>Bit-flip preview</option><option>Depolarising preview</option></select></label></div><div className="mt-5 flex gap-2"><button onClick={run} disabled={status === "queued" || status === "running"} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground disabled:opacity-45"><Zap className="size-4" />Run demo</button><button onClick={cancel} disabled={status !== "queued" && status !== "running"} className="rounded-xl border border-border px-5 text-sm disabled:opacity-35">Cancel</button></div>{status !== "initial" && <Progress value={progress} className="mt-4 bg-white/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" />}</div>
-      <div className="simulation-result">{status === "initial" && <div className="empty-state"><FlaskConical className="size-7 text-primary" /><p>Configure the controls and run the deterministic demonstration.</p></div>}{status === "queued" && <div className="empty-state"><Clock className="size-7 animate-pulse text-amber-300" /><p>Demo job queued locally…</p></div>}{status === "running" && <div className="empty-state"><Atom className="size-8 animate-spin text-secondary" /><p>Applying the predefined circuit response…</p></div>}{status === "failed" && <div className="empty-state text-rose-300"><TriangleAlert className="size-7" /><p>Simulation failed: add at least one gate, then retry.</p><button onClick={run} className="rounded-lg border border-rose-400/35 px-4 py-2 text-xs">Retry</button></div>}{status === "completed" && result && <div><div className="mb-5 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-secondary uppercase tracking-wider">Recognised circuit</p><h3 className="mt-1 text-xl font-semibold">{result.name}</h3></div><div className="text-right text-xs text-muted-foreground"><p>{simulator}</p><p className="mt-1">Execution time: {executionMs} ms</p></div></div><ResultsWorkspace result={result} circuit={circuit} shots={shots} /><p className="mt-5 text-xs leading-5 text-muted-foreground">{result.note} Shots: {shots}. Noise: {noise}.</p></div>}</div></div>
+  const progress = status === "queued" ? 22 : status === "running" ? 68 : status === "completed" ? 100 : 0, executionMs = result?.executionMs ?? Math.round(35 + circuit.gates.length * 7 + shots / 64 + (noise === "Ideal" ? 0 : 18));
+  
+  const simName = result?.simulator === "qiskit_aer" ? "Qiskit Aer" : simulator;
+  const isDemo = result?.simulator !== "qiskit_aer";
+
+  return <section id="simulation-workspace" className="glass mt-3 scroll-mt-24 overflow-hidden rounded-2xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><div className="flex items-center gap-3"><h2 className="text-lg font-semibold">Simulation workspace</h2><span className={`rounded-full border px-3 py-1 text-xs ${isDemo ? 'border-amber-400/30 bg-amber-400/10 text-amber-200' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>{isDemo ? "Demo simulation" : "Real backend"}</span></div><p className="mt-1 text-xs text-muted-foreground">{isDemo ? "Deterministic frontend results—no quantum backend is being executed." : "Connected to Q-SQOOL FastAPI backend."}</p></div><span className={`run-status status-${status}`}><span />{status}</span></div>
+    <div className="grid gap-5 p-5 lg:grid-cols-[.8fr_1.2fr]"><div><div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1"><label className="text-xs text-muted-foreground">Simulator<select value={simulator} onChange={e => setSimulator(e.target.value)} disabled={status === "queued" || status === "running"} className="inspector-input"><option>Local statevector</option><option>Local shot sampler</option><option>Educational noisy model</option></select></label><label className="text-xs text-muted-foreground">Number of shots<select value={shots} onChange={e => setShots(Number(e.target.value))} disabled={status === "queued" || status === "running"} className="inspector-input">{[128, 512, 1024, 2048, 4096].map(value => <option key={value}>{value}</option>)}</select></label><label className="text-xs text-muted-foreground">Noise model<select value={noise} onChange={e => setNoise(e.target.value)} disabled={status === "queued" || status === "running"} className="inspector-input"><option>Ideal</option><option>Bit-flip preview</option><option>Depolarising preview</option></select></label></div><div className="mt-5 flex gap-2"><button onClick={run} disabled={status === "queued" || status === "running"} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground disabled:opacity-45"><Zap className="size-4" />Run {isDemo ? "demo" : "circuit"}</button><button onClick={cancel} disabled={status !== "queued" && status !== "running"} className="rounded-xl border border-border px-5 text-sm disabled:opacity-35">Cancel</button></div>{status !== "initial" && <Progress value={progress} className="mt-4 bg-white/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" />}</div>
+      <div className="simulation-result">{status === "initial" && <div className="empty-state"><FlaskConical className="size-7 text-primary" /><p>Configure the controls and run the simulation.</p></div>}{status === "queued" && <div className="empty-state"><Clock className="size-7 animate-pulse text-amber-300" /><p>Job queued…</p></div>}{status === "running" && <div className="empty-state"><Atom className="size-8 animate-spin text-secondary" /><p>Executing circuit…</p></div>}{status === "failed" && <div className="empty-state text-rose-300"><TriangleAlert className="size-7" /><p>Simulation failed.</p><button onClick={run} className="rounded-lg border border-rose-400/35 px-4 py-2 text-xs">Retry</button></div>}{status === "completed" && result && <div><div className="mb-5 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-secondary uppercase tracking-wider">Recognised circuit</p><h3 className="mt-1 text-xl font-semibold">{result.name}</h3></div><div className="text-right text-xs text-muted-foreground"><p>{simName}</p><p className="mt-1">Execution time: {executionMs} ms</p></div></div><ResultsWorkspace result={result} circuit={circuit} shots={shots} /><p className="mt-5 text-xs leading-5 text-muted-foreground">{result.note} Shots: {shots}. Noise: {noise}.</p></div>}</div></div>
   </section>;
 }
 
