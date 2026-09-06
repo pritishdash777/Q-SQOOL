@@ -369,6 +369,7 @@ function Shell({ page, navigate, children }: { page: Page; navigate: (page: Page
   </main>;
 }
 
+
 function Dashboard({ navigate }: { navigate: (page: Page) => void }) {
   return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8">
     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-sm font-semibold tracking-[.16em] text-secondary uppercase">Level 4 · Quantum Scholar</p><h1 className="glow-text mt-2 text-4xl font-bold tracking-tight sm:text-6xl">Welcome back, Pritish</h1><p className="mt-3 text-muted-foreground">Your next breakthrough is one experiment away.</p></div><div className="flex gap-3"><button onClick={() => navigate("lab")} className="flex items-center gap-2 rounded-xl border border-secondary/55 px-4 py-3 text-sm text-secondary transition hover:bg-secondary hover:text-secondary-foreground"><Plus className="size-4" /> New circuit</button><button onClick={() => soon("AI tutor")} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"><Bot className="size-4" /> Ask AI</button></div></div>
@@ -417,10 +418,10 @@ function Lesson({ module, navigate, setCircuit }: { module: LearningModule; navi
 function AICopilot({ circuit, onApply, onHighlight }: { circuit: Circuit; onApply: (next: Circuit) => void; onHighlight: (ids: number[]) => void }) {
   const [mode, setMode] = useState<AIMode>("Optimise"), [level, setLevel] = useState<AILevel>("Beginner"), [analysis, setAnalysis] = useState<AIAnalysis>(), [stream, setStream] = useState(""), [busy, setBusy] = useState(false), [preview, setPreview] = useState(false), timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
-  const run = async () => { 
-    if (timer.current) clearInterval(timer.current); 
-    setAnalysis(undefined); setPreview(false); setStream(""); setBusy(true); onHighlight([]); 
-    
+  const run = async () => {
+    if (timer.current) clearInterval(timer.current);
+    setAnalysis(undefined); setPreview(false); setStream(""); setBusy(true); onHighlight([]);
+
     let next: AIAnalysis;
     if (mode === "Optimise") {
       const isHealthy = await checkHealth();
@@ -439,13 +440,13 @@ function AICopilot({ circuit, onApply, onHighlight }: { circuit: Circuit; onAppl
     } else {
       next = { ...analyseCircuit(circuit, mode, level), title: `Demo Mode: ${mode}` };
     }
-    
-    setAnalysis(next); onHighlight(next.gateIds); 
-    let i = 0; 
-    timer.current = setInterval(() => { 
-      i += 3; setStream(next.text.slice(0, i)); 
-      if (i >= next.text.length) { if (timer.current) clearInterval(timer.current); setBusy(false); } 
-    }, 22); 
+
+    setAnalysis(next); onHighlight(next.gateIds);
+    let i = 0;
+    timer.current = setInterval(() => {
+      i += 3; setStream(next.text.slice(0, i));
+      if (i >= next.text.length) { if (timer.current) clearInterval(timer.current); setBusy(false); }
+    }, 22);
   };
   const dismiss = () => { if (timer.current) clearInterval(timer.current); setBusy(false); setAnalysis(undefined); setStream(""); setPreview(false); onHighlight([]); };
   const apply = () => { if (!analysis) return; onApply(analysis.after); toast.success("Circuit updated"); dismiss(); };
@@ -469,16 +470,16 @@ function ResultsWorkspace({ result, circuit, shots }: { result: DemoResult; circ
 }
 
 function SimulationPanel({ circuit }: { circuit: Circuit }) {
-  const [simulator, setSimulator] = useState("Local statevector"), [shots, setShots] = useState(1024), [noise, setNoise] = useState("Ideal"), [status, setStatus] = useState<RunState>("initial"), [result, setResult] = useState<DemoResult>(), timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [simulator, setSimulator] = useState("Qiskit Aer"), [shots, setShots] = useState(1024), [noise, setNoise] = useState("Ideal"), [status, setStatus] = useState<RunState>("initial"), [result, setResult] = useState<DemoResult>(), timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stopTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
   useEffect(() => () => stopTimers(), []);
-  const run = async () => { 
-    stopTimers(); setResult(undefined); 
-    if (!circuit.gates.length) { setStatus("failed"); return; } 
-    setStatus("queued"); 
-    
+  const run = async () => {
+    stopTimers(); setResult(undefined);
+    if (!circuit.gates.length) { setStatus("failed"); return; }
+    setStatus("queued");
+
     const isHealthy = await checkHealth();
-    
+
     if (isHealthy) {
       setStatus("running");
       try {
@@ -498,25 +499,231 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
       }
     } else {
       timers.current = [
-        setTimeout(() => setStatus("running"), 500), 
-        setTimeout(() => { 
+        setTimeout(() => setStatus("running"), 500),
+        setTimeout(() => {
           const demoResult = recogniseCircuit(circuit);
-          setResult({ ...demoResult, note: "Demo Mode: " + demoResult.note }); 
-          setStatus("completed"); 
+          setResult({ ...demoResult, note: "Demo Mode: " + demoResult.note });
+          setStatus("completed");
         }, 1650)
       ];
     }
   };
   const cancel = () => { stopTimers(); setStatus("initial"); setResult(undefined); };
   const progress = status === "queued" ? 22 : status === "running" ? 68 : status === "completed" ? 100 : 0, executionMs = result?.executionMs ?? Math.round(35 + circuit.gates.length * 7 + shots / 64 + (noise === "Ideal" ? 0 : 18));
-  
-  const simName = result?.simulator === "qiskit_aer" ? "Qiskit Aer" : simulator;
-  const isDemo = result?.simulator !== "qiskit_aer";
 
-  return <section id="simulation-workspace" className="glass mt-3 scroll-mt-24 overflow-hidden rounded-2xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5"><div><div className="flex items-center gap-3"><h2 className="text-lg font-semibold">Simulation workspace</h2><span className={`rounded-full border px-3 py-1 text-xs ${isDemo ? 'border-amber-400/30 bg-amber-400/10 text-amber-200' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'}`}>{isDemo ? "Demo simulation" : "Real backend"}</span></div><p className="mt-1 text-xs text-muted-foreground">{isDemo ? "Deterministic frontend results—no quantum backend is being executed." : "Connected to Q-SQOOL FastAPI backend."}</p></div><span className={`run-status status-${status}`}><span />{status}</span></div>
-    <div className="grid gap-5 p-5 lg:grid-cols-[.8fr_1.2fr]"><div><div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1"><label className="text-xs text-muted-foreground">Simulator<select value={simulator} onChange={e => setSimulator(e.target.value)} disabled={status === "queued" || status === "running"} className="inspector-input"><option>Local statevector</option><option>Local shot sampler</option><option>Educational noisy model</option></select></label><label className="text-xs text-muted-foreground">Number of shots<select value={shots} onChange={e => setShots(Number(e.target.value))} disabled={status === "queued" || status === "running"} className="inspector-input">{[128, 512, 1024, 2048, 4096].map(value => <option key={value}>{value}</option>)}</select></label><label className="text-xs text-muted-foreground">Noise model<select value={noise} onChange={e => setNoise(e.target.value)} disabled={status === "queued" || status === "running"} className="inspector-input"><option>Ideal</option><option>Bit-flip preview</option><option>Depolarising preview</option></select></label></div><div className="mt-5 flex gap-2"><button onClick={run} disabled={status === "queued" || status === "running"} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground disabled:opacity-45"><Zap className="size-4" />Run {isDemo ? "demo" : "circuit"}</button><button onClick={cancel} disabled={status !== "queued" && status !== "running"} className="rounded-xl border border-border px-5 text-sm disabled:opacity-35">Cancel</button></div>{status !== "initial" && <Progress value={progress} className="mt-4 bg-white/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" />}</div>
-      <div className="simulation-result">{status === "initial" && <div className="empty-state"><FlaskConical className="size-7 text-primary" /><p>Configure the controls and run the simulation.</p></div>}{status === "queued" && <div className="empty-state"><Clock className="size-7 animate-pulse text-amber-300" /><p>Job queued…</p></div>}{status === "running" && <div className="empty-state"><Atom className="size-8 animate-spin text-secondary" /><p>Executing circuit…</p></div>}{status === "failed" && <div className="empty-state text-rose-300"><TriangleAlert className="size-7" /><p>Simulation failed.</p><button onClick={run} className="rounded-lg border border-rose-400/35 px-4 py-2 text-xs">Retry</button></div>}{status === "completed" && result && <div><div className="mb-5 flex flex-wrap justify-between gap-3"><div><p className="text-xs text-secondary uppercase tracking-wider">Recognised circuit</p><h3 className="mt-1 text-xl font-semibold">{result.name}</h3></div><div className="text-right text-xs text-muted-foreground"><p>{simName}</p><p className="mt-1">Execution time: {executionMs} ms</p></div></div><ResultsWorkspace result={result} circuit={circuit} shots={shots} /><p className="mt-5 text-xs leading-5 text-muted-foreground">{result.note} Shots: {shots}. Noise: {noise}.</p></div>}</div></div>
-  </section>;
+  const isBackendResult = result?.simulator === "qiskit_aer";
+  const isDemoResult = Boolean(result && !isBackendResult);
+
+  const simName = isBackendResult
+    ? "Qiskit Aer"
+    : isDemoResult
+      ? "Frontend fallback"
+      : "Awaiting execution";
+
+  const sourceLabel =
+    status === "queued"
+      ? "Connecting"
+      : status === "running"
+        ? "Executing"
+        : isBackendResult
+          ? "Qiskit Aer"
+          : isDemoResult
+            ? "Demo Mode"
+            : "Ready";
+
+  const sourceDescription = isBackendResult
+    ? "Circuit executed through the Q-SQOOL FastAPI backend."
+    : isDemoResult
+      ? "Backend unavailable—showing deterministic frontend fallback results."
+      : "Run the circuit using the connected Qiskit Aer backend.";
+
+  return (
+    <section
+      id="simulation-workspace"
+      className="glass mt-3 scroll-mt-24 overflow-hidden rounded-2xl"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold">Circuit execution</h2>
+
+            <span
+              className={`rounded-full border px-3 py-1 text-xs ${isDemoResult
+                ? "border-amber-400/30 bg-amber-400/10 text-amber-200"
+                : isBackendResult
+                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                  : "border-primary/30 bg-primary/10 text-primary"
+                }`}
+            >
+              {sourceLabel}
+            </span>
+          </div>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            {sourceDescription}
+          </p>
+        </div>
+
+        <span className={`run-status status-${status}`}>
+          <span />
+          {status}
+        </span>
+      </div>
+
+      <div className="grid gap-5 p-5 lg:grid-cols-[.8fr_1.2fr]">
+        <div>
+          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+            <label className="text-xs text-muted-foreground">
+              Simulator
+
+              <select
+                value={simulator}
+                onChange={(event) => setSimulator(event.target.value)}
+                disabled={status === "queued" || status === "running"}
+                className="inspector-input"
+              >
+                <option>Qiskit Aer</option>
+                <option disabled>Cirq — coming soon</option>
+                <option disabled>Additional simulators — coming soon</option>
+              </select>
+            </label>
+
+            <label className="text-xs text-muted-foreground">
+              Number of shots
+
+              <select
+                value={shots}
+                onChange={(event) => setShots(Number(event.target.value))}
+                disabled={status === "queued" || status === "running"}
+                className="inspector-input"
+              >
+                {[128, 512, 1024, 2048, 4096].map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-xs text-muted-foreground">
+              Noise model
+
+              <select
+                value={noise}
+                onChange={(event) => setNoise(event.target.value)}
+                disabled={status === "queued" || status === "running"}
+                className="inspector-input"
+              >
+                <option>Ideal</option>
+                <option disabled>Bit-flip noise — coming soon</option>
+                <option disabled>Depolarising noise — coming soon</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <button
+              onClick={run}
+              disabled={status === "queued" || status === "running"}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground disabled:opacity-45"
+            >
+              <Zap className="size-4" />
+
+              {status === "queued"
+                ? "Connecting…"
+                : status === "running"
+                  ? "Running Circuit…"
+                  : "Run Circuit"}
+            </button>
+
+            <button
+              onClick={cancel}
+              disabled={status !== "queued" && status !== "running"}
+              className="rounded-xl border border-border px-5 text-sm disabled:opacity-35"
+            >
+              Cancel
+            </button>
+          </div>
+
+          {status !== "initial" && (
+            <Progress
+              value={progress}
+              className="mt-4 bg-white/10 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary"
+            />
+          )}
+        </div>
+
+        <div className="simulation-result">
+          {status === "initial" && (
+            <div className="empty-state">
+              <FlaskConical className="size-7 text-primary" />
+              <p>Configure the circuit and start execution.</p>
+            </div>
+          )}
+
+          {status === "queued" && (
+            <div className="empty-state">
+              <Clock className="size-7 animate-pulse text-amber-300" />
+              <p>Connecting to the quantum simulator…</p>
+            </div>
+          )}
+
+          {status === "running" && (
+            <div className="empty-state">
+              <Atom className="size-8 animate-spin text-secondary" />
+              <p>Executing circuit with Qiskit Aer…</p>
+            </div>
+          )}
+
+          {status === "failed" && (
+            <div className="empty-state text-rose-300">
+              <TriangleAlert className="size-7" />
+              <p>Simulation failed. Check the circuit and try again.</p>
+
+              <button
+                onClick={run}
+                className="rounded-lg border border-rose-400/35 px-4 py-2 text-xs"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {status === "completed" && result && (
+            <div>
+              <div className="mb-5 flex flex-wrap justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-secondary">
+                    Circuit result
+                  </p>
+
+                  <h3 className="mt-1 text-xl font-semibold">
+                    {result.name}
+                  </h3>
+                </div>
+
+                <div className="text-right text-xs text-muted-foreground">
+                  <p>{simName}</p>
+                  <p className="mt-1">
+                    Execution time: {executionMs} ms
+                  </p>
+                </div>
+              </div>
+
+              <ResultsWorkspace
+                result={result}
+                circuit={circuit}
+                shots={shots}
+              />
+
+              <p className="mt-5 text-xs leading-5 text-muted-foreground">
+                {result.note} Shots: {shots}. Noise: {noise}.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
 }
 
 function Lab({ navigate, circuit, setCircuit }: { navigate: (page: Page) => void; circuit: Circuit; setCircuit: React.Dispatch<React.SetStateAction<Circuit>> }) {
@@ -590,29 +797,29 @@ export default function HomePage() {
   const activeLesson = decodeURIComponent(pathname.split("/").filter(Boolean).at(-1) ?? "entanglement");
   const [circuit, setCircuit] = useState<Circuit>(() => { if (typeof window === "undefined") return initialCircuit; try { return JSON.parse(localStorage.getItem("q-sqool-circuit") ?? "") as Circuit } catch { return initialCircuit } });
   useEffect(() => {
-  if (
-    pathname !== "/" ||
-    sessionStorage.getItem("q-sqool-intro-seen") === "true"
-  ) {
-    setShowIntro(false);
-  }
-}, [pathname]);
+    if (
+      pathname !== "/" ||
+      sessionStorage.getItem("q-sqool-intro-seen") === "true"
+    ) {
+      setShowIntro(false);
+    }
+  }, [pathname]);
 
-const finishIntro = () => {
-  sessionStorage.setItem("q-sqool-intro-seen", "true");
-  setShowIntro(false);
-};
-useEffect(() => { localStorage.setItem("q-sqool-circuit", JSON.stringify(circuit)) }, [circuit]);
+  const finishIntro = () => {
+    sessionStorage.setItem("q-sqool-intro-seen", "true");
+    setShowIntro(false);
+  };
+  useEffect(() => { localStorage.setItem("q-sqool-circuit", JSON.stringify(circuit)) }, [circuit]);
   const navigate = (next: Page) => { router.push(next === "lesson" ? "/learn/entanglement" : pagePaths[next as Exclude<Page, "lesson">]); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const openLesson = (id: string) => router.push(`${learningModules.find(m => m.id === id)?.category === "Foundation" ? "/learn" : "/algorithms"}/${id}`), tryModule = (id: string) => { setCircuit(starterCircuit(id)); router.push(`/composer?starter=${encodeURIComponent(id)}`); };
- if (page === "landing") {
-  return (
-    <>
-      {showIntro && <QuantumIntro onComplete={finishIntro} />}
-      <Landing navigate={navigate} />
-      <Toaster position="bottom-right" richColors />
-    </>
-  );
-}
+  if (page === "landing") {
+    return (
+      <>
+        {showIntro && <QuantumIntro onComplete={finishIntro} />}
+        <Landing navigate={navigate} />
+        <Toaster position="bottom-right" richColors />
+      </>
+    );
+  }
   return <Shell page={page} navigate={navigate}>{page === "dashboard" ? <Dashboard navigate={navigate} /> : page === "learning" ? <Learning openLesson={openLesson} tryModule={tryModule} /> : page === "lesson" ? <Lesson module={learningModules.find(m => m.id === activeLesson) ?? learningModules[0]} navigate={navigate} setCircuit={setCircuit} /> : page === "lab" ? <Lab navigate={navigate} circuit={circuit} setCircuit={setCircuit} /> : page === "code" ? <CodeLab circuit={circuit} setCircuit={setCircuit} navigate={navigate} /> : page === "projects" ? <ProjectsWorkspace circuit={circuit} setCircuit={setCircuit} navigate={navigate} /> : <RouteOverview page={page as "algorithms" | "challenges" | "profile"} openLesson={openLesson} tryModule={tryModule} navigate={navigate} />}<Toaster position="bottom-right" richColors /></Shell>;
 }
