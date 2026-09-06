@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -139,14 +139,37 @@ function soon(feature?: string) {
   });
 }
 
-function Brand({ compact = false, goHome }: { compact?: boolean; goHome: () => void }) {
+function Brand({
+  compact = false,
+  goHome,
+}: {
+  compact?: boolean;
+  goHome: () => void;
+}) {
   return (
-    <button onClick={goHome} className="group flex items-center gap-3 text-left" aria-label="Q-SQOOL home">
-      <span className="relative grid size-10 place-items-center rounded-xl border border-primary/30 bg-primary/10 shadow-[0_0_28px_rgba(174,126,255,.16)]">
-        <span className="absolute inset-1 rounded-lg border border-secondary/20 transition-transform duration-500 group-hover:rotate-45" />
-        <Atom className="size-5 text-primary" />
+    <button
+      type="button"
+      onClick={goHome}
+      className="group flex items-center gap-3 text-left"
+      aria-label="Go to Q-SQOOL home"
+    >
+      <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-primary/30 bg-[#070a19]">
+        <Image
+          src="/q-sqool-mark.svg"
+          alt=""
+          width={130}
+          height={120}
+          priority
+          aria-hidden="true"
+          className="size-10 object-contain"
+        />
       </span>
-      {!compact && <span className="text-lg font-bold tracking-[.16em]">Q-SQOOL</span>}
+
+      {!compact && (
+        <span className="text-lg font-bold tracking-[0.16em] text-foreground">
+          Q-SQOOL
+        </span>
+      )}
     </button>
   );
 }
@@ -338,7 +361,22 @@ function Landing({ navigate }: { navigate: (page: Page) => void }) {
       <section className="relative mx-auto grid min-h-[690px] max-w-[1480px] items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
         <div className="page-enter relative z-10">
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-4 py-2 text-xs font-semibold tracking-[.18em] text-primary uppercase"><Sparkles className="size-3.5" /> AI-powered quantum learning</div>
-          <h1 className="glow-text max-w-4xl text-6xl font-bold leading-[.92] tracking-[-.065em] sm:text-7xl lg:text-[6.8rem]">Q-SQOOL</h1>
+          
+<div className="mt-3 flex items-center gap-0">
+  <Image
+    src="/q-sqool-mark.svg"
+    alt="Q"
+    width={130}
+    height={120}
+    priority
+    className="h-[5.5rem] w-[6.5rem] shrink-0 translate-y-4 object-contain sm:h-[7rem] sm:w-[8rem] lg:h-[8rem] lg:w-[9rem]"
+  />
+
+  <h1 className="glow-text -ml-2 whitespace-nowrap text-6xl font-black leading-none tracking-tight sm:-ml-3 sm:text-7xl lg:-ml-9 lg:text-8xl">
+    -SQOOL
+  </h1>
+</div>
+
           <p className="mt-7 max-w-3xl text-2xl font-medium leading-tight  text-foreground sm:text-3xl">Learn Quantum. Build Circuits. Shape the Future</p>
           <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">Move from abstract theory to executable intuition through structured lessons, a visual circuit studio, multi-simulator workflows and contextual AI guidance.</p>
           <div className="mt-9 flex flex-wrap gap-4">

@@ -1,0 +1,84 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 130 120"
+>
+  <defs>
+    <linearGradient
+      id="qGrad"
+      x1="0%"
+      y1="0%"
+      x2="100%"
+      y2="100%"
+    >
+      <stop offset="0%" stop-color="#00F2FE"/>
+      <stop offset="100%" stop-color="#7F00FF"/>
+    </linearGradient>
+
+    <linearGradient
+      id="gateGrad"
+      x1="0%"
+      y1="0%"
+      x2="100%"
+      y2="0%"
+    >
+      <stop offset="0%" stop-color="#7F00FF"/>
+      <stop offset="100%" stop-color="#00F2FE"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(10, 10)">
+    <path
+      d="M 50 10 A 35 35 0 1 0 75 70"
+      fill="none"
+      stroke="url(#qGrad)"
+      stroke-width="8"
+      stroke-linecap="round"
+    />
+
+    <circle cx="40" cy="45" r="7" fill="#00F2FE"/>
+    <circle cx="60" cy="45" r="7" fill="#7F00FF"/>
+
+    <ellipse
+      cx="50"
+      cy="45"
+      rx="22"
+      ry="8"
+      fill="none"
+      stroke="#00F2FE"
+      stroke-width="2"
+      stroke-dasharray="3,3"
+      transform="rotate(-20 50 45)"
+    />
+
+    <path
+      d="M 62 62 L 85 85 L 110 85"
+      fill="none"
+      stroke="url(#qGrad)"
+      stroke-width="6"
+      stroke-linecap="round"
+    />
+
+    <rect
+      x="82"
+      y="73"
+      width="22"
+      height="24"
+      rx="4"
+      fill="#0A0E17"
+      stroke="url(#gateGrad)"
+      stroke-width="2"
+    />
+
+    <text
+      x="93"
+      y="90"
+      fill="#00F2FE"
+      font-family="sans-serif"
+      font-weight="bold"
+      font-size="14"
+      text-anchor="middle"
+    >
+      H
+    </text>
+  </g>
+</svg>
