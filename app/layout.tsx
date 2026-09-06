@@ -11,13 +11,28 @@ export const metadata: Metadata = {
   },
 };
 
+const themeScript = `
+  try {
+    const savedTheme = localStorage.getItem("q-sqool-theme");
+
+    document.documentElement.classList.toggle(
+      "dark",
+      savedTheme === "dark"
+    );
+  } catch {}
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+
       <body>{children}</body>
     </html>
   );
