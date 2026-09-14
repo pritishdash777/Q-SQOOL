@@ -5,3 +5,9 @@ qiskit==2.5.2
 qiskit-aer==0.17.2
 pytest
 python-dotenv
+sqlmodel
+PyJWT
+pwdlib[argon2]
+email-validator
+psycopg[binary]
+httpx

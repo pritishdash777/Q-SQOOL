@@ -2,6 +2,7 @@
 
 
 from __future__ import annotations
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,11 +10,18 @@ from fastapi.responses import JSONResponse
 from .models import SimulateRequest, SimulationResponse, OptimizeRequest
 from .simulator import SimulationError, simulate_circuit
 from .optimizer import optimize_circuit
+from .database import create_db_and_tables
+from .routers import authentication, profile, progress, projects
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
 
 app = FastAPI(
     title="Q-SQOOL API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -36,9 +44,9 @@ async def simulation_error_handler(
     exc: SimulationError,
 ):
     error: dict[str, object] = {
-    "code": exc.code,
-    "message": exc.message,
-}
+        "code": exc.code,
+        "message": exc.message,
+    }
 
     if exc.gate_id is not None:
         error["gateId"] = exc.gate_id
@@ -50,6 +58,11 @@ async def simulation_error_handler(
             "error": error,
         },
     )
+
+app.include_router(authentication.router)
+app.include_router(profile.router)
+app.include_router(progress.router)
+app.include_router(projects.router)
 
 
 @app.get("/health")
@@ -75,4 +88,5 @@ async def simulate(request: SimulateRequest):
 @app.post("/api/optimize")
 async def optimize(request: OptimizeRequest):
     return optimize_circuit(request.circuit)
+
 
