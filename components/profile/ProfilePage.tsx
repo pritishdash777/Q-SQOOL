@@ -10,12 +10,12 @@ import { Loader2, LogOut, Save, User as UserIcon, BookOpen, FolderOpen, Award, C
 
 export default function ProfilePage() {
   const router = useRouter();
-  
+
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [progress, setProgress] = useState<LearningProgress[]>([]);
   const [projects, setProjects] = useState<CloudProject[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,10 +34,10 @@ export default function ProfilePage() {
       try {
         const currentUser = await getCurrentUser();
         setUser(currentUser);
-        
+
         const currentProfile = await getProfile();
         setProfile(currentProfile);
-        
+
         // initialize form
         setFullName(currentProfile.full_name || "");
         setUserRole(currentProfile.user_role || "");
@@ -46,13 +46,13 @@ export default function ProfilePage() {
         setExperienceLevel(currentProfile.experience_level || "");
         setPreferredSdk(currentProfile.preferred_sdk || "");
         setLearningGoal(currentProfile.learning_goal || "");
-        
+
         // load stats
         const prog = await getProgress();
         setProgress(prog);
         const projs = await getProjects();
         setProjects(projs);
-        
+
       } catch (err: any) {
         if (err.message.includes("401") || err.message.includes("Credentials") || err.message.includes("Not authenticated")) {
           router.replace("/login?next=/profile");
@@ -63,16 +63,20 @@ export default function ProfilePage() {
         setLoading(false);
       }
     }
-    
+
     loadData();
   }, [router]);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!profile) return;
+
     setSaving(true);
-    
+    setError("");
+
     try {
-      const updated = await updateProfile({
+      const updatedProfile = await updateProfile({
         full_name: fullName,
         user_role: userRole,
         institution: institution,
@@ -81,10 +85,15 @@ export default function ProfilePage() {
         preferred_sdk: preferredSdk,
         learning_goal: learningGoal,
       });
-      setProfile(updated);
-      toast.success("Profile updated successfully");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update profile");
+
+      setProfile(updatedProfile);
+
+      toast.success("Profile saved successfully");
+      router.replace("/dashboard");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Could not save profile"
+      );
     } finally {
       setSaving(false);
     }
@@ -102,7 +111,7 @@ export default function ProfilePage() {
       </div>
     );
   }
-  
+
   if (error || !profile) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
@@ -113,14 +122,14 @@ export default function ProfilePage() {
       </div>
     );
   }
-  
+
   const initials = profile.full_name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .substring(0, 2)
     .toUpperCase() || "?";
-    
+
   const completedModules = progress.filter(p => p.completed).length;
   const joinedDate = new Date(profile.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
 
@@ -140,7 +149,7 @@ export default function ProfilePage() {
               <Award className="size-3" /> {profile.xp} XP
             </div>
           </div>
-          
+
           <div className="glass p-6 rounded-2xl">
             <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2">
               <CheckCircle2 className="size-4 text-primary" /> Activity
@@ -160,8 +169,8 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={handleSignOut}
             className="w-full flex justify-center items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive hover:bg-destructive/20 transition"
           >
@@ -175,7 +184,7 @@ export default function ProfilePage() {
             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
               <UserIcon className="size-5 text-primary" /> Profile Settings
             </h2>
-            
+
             <form onSubmit={handleSave} className="space-y-5">
               <div className="grid sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
@@ -190,8 +199,8 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Role</label>
-                  <select 
-                    value={userRole} 
+                  <select
+                    value={userRole}
                     onChange={(e) => setUserRole(e.target.value)}
                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 appearance-none"
                   >
@@ -202,7 +211,7 @@ export default function ProfilePage() {
                   </select>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Institution / Company (Optional)</label>
                 <input
@@ -212,7 +221,7 @@ export default function ProfilePage() {
                   className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Biography (Optional)</label>
                 <textarea
@@ -223,12 +232,12 @@ export default function ProfilePage() {
                   placeholder="Share a bit about your quantum journey..."
                 />
               </div>
-              
+
               <div className="grid sm:grid-cols-2 gap-5 pt-2 border-t border-border/50 mt-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Experience Level</label>
-                  <select 
-                    value={experienceLevel} 
+                  <select
+                    value={experienceLevel}
                     onChange={(e) => setExperienceLevel(e.target.value)}
                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 appearance-none"
                   >
@@ -239,8 +248,8 @@ export default function ProfilePage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Preferred SDK</label>
-                  <select 
-                    value={preferredSdk} 
+                  <select
+                    value={preferredSdk}
                     onChange={(e) => setPreferredSdk(e.target.value)}
                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary/50 appearance-none"
                   >
@@ -250,7 +259,7 @@ export default function ProfilePage() {
                   </select>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Primary Learning Goal (Optional)</label>
                 <input
