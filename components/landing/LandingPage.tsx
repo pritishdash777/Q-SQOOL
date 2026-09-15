@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } fr
 import { ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronRight, Code2, Copy, Menu, Moon, Orbit, Pause, Play, Plus, Sparkles, Sun, X } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { QuantumSculpture } from "./QuantumSculpture";
+import { BlochExplorer } from "./BlochExplorer";
 import "./landing-page.css";
 
 const concepts = [
@@ -260,6 +261,8 @@ export function LandingPage() {
       <div className="qh-finale-orbits" aria-hidden="true"><i /><i /><i /><span /></div>
       <div className="qh-container" data-reveal><p className="qh-eyebrow"><span className="qh-live-dot" /> THE NEXT POSSIBILITY IS YOURS</p><h2 id="qh-finale-title">The future is<br /><em>not a spectator sport.</em></h2><p>Learn Quantum. Build Circuits. Shape the Future.</p><Link href="/dashboard" className="qh-button qh-button-primary">Let’s build something quantum <ArrowUpRight size={20} /></Link><span className="qh-finale-note">Your curiosity is the only thing you need to bring.</span></div>
     </section>
+
+    <BlochExplorer />
 
     <footer className="qh-footer qh-container"><div className="qh-footer-top"><Link href="/" className="qh-brand" aria-label="Q-SQOOL home"><Image src="/q-sqool-mark.svg" width={36} height={34} alt="" /><span>Q-SQOOL<small>SMALL PARTICLES. BIG POSSIBILITIES.</small></span></Link><nav aria-label="Footer navigation"><Link href="/learn">Learn</Link><Link href="/composer">Build</Link><Link href="/code-lab">Code</Link><Link href="/login">Join in <ArrowUpRight size={13} /></Link></nav><a href="#top" className="qh-back-top" aria-label="Back to top"><ArrowUpRight size={21} /></a></div><div className="qh-footer-bottom"><span>Made for minds that don’t stop at “what if.”</span><span>Q-SQOOL / A SCHOOL OF POSSIBILITY</span></div></footer>
   </main>;
