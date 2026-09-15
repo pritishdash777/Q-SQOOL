@@ -16,6 +16,7 @@ export interface UserProfile {
   learning_goal: string | null;
   avatar_url: string | null;
   xp: number;
+  last_visited_path?: string | null;
   updated_at: string;
 }
 
@@ -30,6 +31,7 @@ export interface LearningProgress {
   progress: number;
   quiz_score: number | null;
   completed: boolean;
+  completed_lessons: string[];
   updated_at: string;
 }
 

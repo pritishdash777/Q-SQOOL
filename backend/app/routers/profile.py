@@ -5,6 +5,7 @@ from ..database import get_session
 from ..db_models import User, Profile
 from ..schemas import ProfileResponse, ProfileUpdate
 from ..dependencies import get_current_user
+from ..learning import earned_xp
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -15,7 +16,7 @@ def get_profile(current_user: User = Depends(get_current_user), session: Session
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
         
-    return profile
+    return ProfileResponse(**{**profile.model_dump(), "xp": earned_xp(session, current_user.id)})
 
 @router.patch("", response_model=ProfileResponse)
 def update_profile(
@@ -39,4 +40,4 @@ def update_profile(
     session.commit()
     session.refresh(profile)
     
-    return profile
+    return ProfileResponse(**{**profile.model_dump(), "xp": earned_xp(session, current_user.id)})

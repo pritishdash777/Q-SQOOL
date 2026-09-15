@@ -1,97 +1,93 @@
-from typing import List
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import update
 from sqlmodel import Session, select
 from ..database import get_session
 from ..db_models import User, LearningProgress, Profile
 from ..schemas import ProgressResponse, ProgressUpdate, UserProgressSync
 from ..dependencies import get_current_user
+from ..learning import REWARDS, valid_lessons, earned_xp
 
 router = APIRouter(prefix="/api/progress", tags=["progress"])
 
-@router.get("", response_model=List[ProgressResponse])
+
+def records(session: Session, user_id: str):
+    return session.exec(select(LearningProgress).where(LearningProgress.user_id == user_id)).all()
+
+
+def validate_module(module_id: str, lessons: list[str]):
+    if module_id not in REWARDS or not set(lessons) <= valid_lessons(module_id):
+        raise HTTPException(status_code=422, detail="Unknown module or lesson ID")
+
+
+def lock_progress(session: Session, user_id: str):
+    # Serialize writes for this account before reading. Also works on SQLite,
+    # where SELECT FOR UPDATE does not acquire a write lock.
+    session.execute(update(Profile).where(Profile.user_id == user_id).values(xp=Profile.xp))
+
+
+def merge_module(session: Session, user_id: str, module_id: str, percent: int,
+                 completed: bool | None, quiz_score: int | None, lessons: list[str]):
+    record = session.exec(select(LearningProgress).where(
+        LearningProgress.user_id == user_id, LearningProgress.module_id == module_id
+    )).first()
+    if record is None:
+        record = LearningProgress(user_id=user_id, module_id=module_id)
+    lesson_ids = set(record.completed_lessons) | set(lessons)
+    # Preserve completions from clients predating lesson IDs.
+    if record.completed or completed or percent == 100 or module_id in lesson_ids:
+        lesson_ids.add(module_id)
+    record.completed_lessons = sorted(lesson_ids)
+    record.completed = module_id in lesson_ids
+    record.progress = 100 if record.completed else max(record.progress, percent)
+    if quiz_score is not None:
+        record.quiz_score = max(record.quiz_score or 0, quiz_score)
+    record.updated_at = datetime.now(timezone.utc)
+    session.add(record)
+    session.flush()
+    return record
+
+
+def update_totals(session: Session, user_id: str, path: str | None = None):
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).one()
+    profile.xp = earned_xp(session, user_id)
+    if path in {f"/{section}/{module}" for section in ("learn", "algorithms") for module in REWARDS}:
+        profile.last_visited_path = path
+    profile.updated_at = datetime.now(timezone.utc)
+    session.add(profile)
+    return profile
+
+
+@router.get("", response_model=list[ProgressResponse])
 def get_progress(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
-    progress_records = session.exec(select(LearningProgress).where(LearningProgress.user_id == current_user.id)).all()
-    return progress_records
+    return records(session, current_user.id)
+
 
 @router.put("")
-def sync_progress(
-    sync_data: UserProgressSync,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    # Upsert Profile data (XP and last_visited_path)
-    profile = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
-    if profile:
-        profile.xp = sync_data.xp
-        if sync_data.lastVisitedPath:
-            profile.last_visited_path = sync_data.lastVisitedPath
-        profile.updated_at = datetime.now(timezone.utc)
-        session.add(profile)
-        
-    # Upsert each module
-    for mod_id, mod_data in sync_data.modules.items():
-        progress = session.exec(
-            select(LearningProgress)
-            .where(LearningProgress.user_id == current_user.id)
-            .where(LearningProgress.module_id == mod_id)
-        ).first()
-        
-        if not progress:
-            progress = LearningProgress(
-                user_id=current_user.id,
-                module_id=mod_id,
-                progress=mod_data.percent,
-                quiz_score=mod_data.quizScore,
-                completed=mod_data.completed
-            )
-        else:
-            progress.progress = mod_data.percent
-            progress.quiz_score = mod_data.quizScore
-            progress.completed = mod_data.completed
-            
-        progress.updated_at = datetime.now(timezone.utc)
-        session.add(progress)
-        
+def sync_progress(sync_data: UserProgressSync, current_user: User = Depends(get_current_user),
+                  session: Session = Depends(get_session)):
+    for module_id, module in sync_data.modules.items():
+        validate_module(module_id, module.completedLessons)
+        if module.moduleId != module_id:
+            raise HTTPException(status_code=422, detail="Module IDs must match")
+    lock_progress(session, current_user.id)
+    for module_id, module in sync_data.modules.items():
+        merge_module(session, current_user.id, module_id, module.percent,
+                     module.completed, module.quizScore, module.completedLessons)
+    profile = update_totals(session, current_user.id, sync_data.lastVisitedPath)
     session.commit()
-    return {"status": "success"}
+    return {"xp": profile.xp, "modules": [ProgressResponse.model_validate(record, from_attributes=True)
+                                         for record in records(session, current_user.id)]}
+
 
 @router.patch("/modules/{module_id}", response_model=ProgressResponse)
-def update_module_progress(
-    module_id: str,
-    progress_update: ProgressUpdate,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    progress = session.exec(
-        select(LearningProgress)
-        .where(LearningProgress.user_id == current_user.id)
-        .where(LearningProgress.module_id == module_id)
-    ).first()
-    
-    if not progress:
-        progress = LearningProgress(
-            user_id=current_user.id,
-            module_id=module_id,
-            progress=progress_update.progress,
-            quiz_score=progress_update.quiz_score,
-            completed=progress_update.completed if progress_update.completed is not None else False
-        )
-    else:
-        progress.progress = progress_update.progress
-        if progress_update.quiz_score is not None:
-            progress.quiz_score = progress_update.quiz_score
-        if progress_update.completed is not None:
-            progress.completed = progress_update.completed
-            
-    if progress.progress >= 100:
-        progress.completed = True
-        progress.progress = 100
-        
-    progress.updated_at = datetime.now(timezone.utc)
-    
-    session.add(progress)
+def update_module_progress(module_id: str, progress_update: ProgressUpdate,
+                           current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    validate_module(module_id, progress_update.completed_lessons)
+    lock_progress(session, current_user.id)
+    record = merge_module(session, current_user.id, module_id, progress_update.progress,
+                          progress_update.completed, progress_update.quiz_score, progress_update.completed_lessons)
+    update_totals(session, current_user.id)
     session.commit()
-    session.refresh(progress)
-    
-    return progress
+    session.refresh(record)
+    return record

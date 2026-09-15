@@ -1,11 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { getCurrentUser, getProgress, saveProgress, updateModuleProgress, hasAuthToken } from "@/lib/auth-api";
-import { getLocalProgress, saveLocalProgress, updateLocalModuleProgress, markProgressSynced } from "@/lib/progress-storage";
-import { UserProgress, ModuleProgress } from "@/lib/progress-types";
-
-type SyncStatus = "idle" | "saving-local" | "syncing" | "synced" | "offline" | "error";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { AUTH_CHANGED, getCachedUser, getCurrentUser, getStoredToken } from "@/lib/auth-api";
+import { ProgressSession, type ProgressState, type SyncStatus } from "@/lib/progress-sync";
+import type { UserProgress, ModuleProgress } from "@/lib/progress-types";
 
 type ProgressContextValue = {
   progress: UserProgress | null;
@@ -13,191 +11,74 @@ type ProgressContextValue = {
   syncStatus: SyncStatus;
   completeLesson: (moduleId: string, lessonId: string) => void;
   updateModule: (moduleId: string, patch: Partial<ModuleProgress>) => void;
-  addXP: (amount: number) => void;
   refreshProgress: () => void;
 };
-
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
 
-export const ProgressProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
-
-  // Helper to merge local and remote records
-  const mergeProgress = useCallback((local: UserProgress, remote: UserProgress): UserProgress => {
-    // Choose newer based on updatedAt
-    if (new Date(local.updatedAt) > new Date(remote.updatedAt)) {
-      return { ...local, pendingSync: true };
-    }
-    // remote is newer
-    return { ...remote, pendingSync: false };
-  }, []);
-
-  const loadAndSync = useCallback(async () => {
-      // If no auth token, treat as unauthenticated visitor
-      if (!hasAuthToken()) {
-        setLoading(false);
-        setSyncStatus("idle");
-        setProgress(null);
-        return;
-      }
-      try {
-        setLoading(true);
-        const user = await getCurrentUser();
-        const userId = user.id;
-
-        // Load local progress (or create empty)
-        const localProg = getLocalProgress(userId);
-
-        // Fetch backend progress
-        const remoteArray = await getProgress();
-        // Convert array of LearningProgress into UserProgress shape
-        const remoteProg: UserProgress = {
-          version: 1,
-          userId,
-          xp: 0,
-          completedModules: 0,
-          modules: {},
-          updatedAt: new Date().toISOString(),
-          pendingSync: false,
-        };
-        remoteArray.forEach(p => {
-          remoteProg.modules[p.module_id] = {
-            moduleId: p.module_id,
-            completed: p.completed,
-            percent: p.progress,
-            completedLessons: [],
-            updatedAt: p.updated_at,
-          };
-          if (p.completed) remoteProg.completedModules += 1;
-        });
-
-        const merged = mergeProgress(localProg, remoteProg);
-        setProgress(merged);
-        saveLocalProgress(userId, merged);
-
-        if (merged.pendingSync) {
-          setSyncStatus("syncing");
-          await saveProgress(merged);
-          markProgressSynced(userId);
-          setSyncStatus("synced");
-          setProgress({ ...merged, pendingSync: false });
-        } else {
-          setSyncStatus("synced");
-        }
-      } catch (err) {
-        // Handle unauthenticated errors silently
-        if (err && typeof err === "object" && "status" in err && err.status === 401) {
-          // token likely invalid; clear state
-          setLoading(false);
-          setSyncStatus("idle");
-          setProgress(null);
-        } else {
-          console.error(err);
-          setSyncStatus("error");
-        }
-      } finally {
-        // Ensure loading is false for authenticated paths; unauthenticated already returned early
-        setLoading(false);
-      }
-    }, [mergeProgress]);
-
-  // Initial load
-  useEffect(() => {
-    loadAndSync();
-  }, [loadAndSync]);
-
-  // Retry on focus / online
-  useEffect(() => {
-    const handler = () => {
-      if (progress && progress.pendingSync) {
-        loadAndSync();
-      }
-    };
-    window.addEventListener("focus", handler);
-    window.addEventListener("online", handler);
-    return () => {
-      window.removeEventListener("focus", handler);
-      window.removeEventListener("online", handler);
-    };
-  }, [progress, loadAndSync]);
-
-  const completeLesson = (moduleId: string, lessonId: string) => {
-    if (!progress) return;
-    const userId = progress.userId;
-    const updated = updateLocalModuleProgress(userId, moduleId, {
-      completed: true,
-      percent: 100,
-      completedLessons: [lessonId],
-    });
-    setProgress(updated);
-    // debounce sync
-    setSyncStatus("saving-local");
-    saveLocalProgress(userId, updated);
-    // fire async sync
-    (async () => {
-      setSyncStatus("syncing");
-      await saveProgress(updated);
-      markProgressSynced(userId);
-      setSyncStatus("synced");
-    })();
+function subscribeAuth(listener: () => void) {
+  window.addEventListener(AUTH_CHANGED, listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    window.removeEventListener(AUTH_CHANGED, listener);
+    window.removeEventListener("storage", listener);
   };
+}
+
+function AccountProgress({ children, token }: { children: ReactNode; token: string | null }) {
+  const session = useRef<ProgressSession | null>(null);
+  const [state, setState] = useState<Partial<ProgressState>>({ loading: true, syncStatus: "idle" });
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    const stop = () => { controller.abort(); session.current?.stop(); };
+    const initialize = async () => {
+      try {
+        const user = token ? getCachedUser() || await getCurrentUser({ token, signal: controller.signal }) : null;
+        if (!active || getStoredToken() !== token) return;
+        const current = new ProgressSession(user?.id || "guest", token, setState);
+        session.current = current;
+        setState(current.state);
+        void current.refresh();
+      } catch {
+        if (active) setState({ loading: false, syncStatus: "offline" });
+      }
+    };
+    void initialize();
+    const retry = () => { if (session.current) void session.current.refresh(); else void initialize(); };
+    // Invalidate work synchronously on logout, before React rerenders the keyed provider.
+    const authChanged = () => { if (getStoredToken() !== token) stop(); };
+    window.addEventListener(AUTH_CHANGED, authChanged);
+    window.addEventListener("online", retry);
+    window.addEventListener("focus", retry);
+    return () => {
+      active = false; stop();
+      window.removeEventListener(AUTH_CHANGED, authChanged);
+      window.removeEventListener("online", retry);
+      window.removeEventListener("focus", retry);
+    };
+  }, [token]);
 
   const updateModule = (moduleId: string, patch: Partial<ModuleProgress>) => {
-    if (!progress) return;
-    const userId = progress.userId;
-    const updated = updateLocalModuleProgress(userId, moduleId, patch);
-    setProgress(updated);
-    setSyncStatus("saving-local");
-    saveLocalProgress(userId, updated);
-    (async () => {
-      setSyncStatus("syncing");
-      await updateModuleProgress(moduleId, patch);
-      markProgressSynced(userId);
-      setSyncStatus("synced");
-    })();
+    if (getStoredToken() !== token) return;
+    session.current?.update(moduleId, patch, window.location.pathname);
   };
+  return <ProgressContext.Provider value={{
+    progress: state.progress || null, loading: state.loading ?? true, syncStatus: state.syncStatus || "idle",
+    updateModule,
+    completeLesson: (moduleId, lessonId) => updateModule(moduleId, {
+      completed: true, percent: 100, completedLessons: [lessonId],
+    }),
+    refreshProgress: () => { void session.current?.refresh(); },
+  }}>{children}</ProgressContext.Provider>;
+}
 
-  const addXP = (amount: number) => {
-    if (!progress) return;
-    const userId = progress.userId;
-    const updated = { ...progress, xp: progress.xp + amount, updatedAt: new Date().toISOString(), pendingSync: true };
-    setProgress(updated);
-    saveLocalProgress(userId, updated);
-    (async () => {
-      setSyncStatus("syncing");
-      await saveProgress(updated);
-      markProgressSynced(userId);
-      setSyncStatus("synced");
-    })();
-  };
+export function ProgressProvider({ children }: { children: ReactNode }) {
+  const token = useSyncExternalStore(subscribeAuth, getStoredToken, () => null);
+  return <AccountProgress key={token || "guest"} token={token}>{children}</AccountProgress>;
+}
 
-  const refreshProgress = () => {
-    loadAndSync();
-  };
-
-  return (
-    <ProgressContext.Provider
-      value={{
-        progress,
-        loading,
-        syncStatus,
-        completeLesson,
-        updateModule,
-        addXP,
-        refreshProgress,
-      }}
-    >
-      {children}
-    </ProgressContext.Provider>
-  );
-};
-
-export const useProgress = () => {
-  const ctx = useContext(ProgressContext);
-  if (!ctx) {
-    throw new Error("useProgress must be used within a ProgressProvider");
-  }
-  return ctx;
-};
+export function useProgress() {
+  const context = useContext(ProgressContext);
+  if (!context) throw new Error("useProgress must be used within a ProgressProvider");
+  return context;
+}

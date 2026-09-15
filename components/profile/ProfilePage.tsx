@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserProfile, AuthUser, LearningProgress, CloudProject } from "@/lib/auth-types";
-import { getCurrentUser, getProfile, updateProfile, logoutUser, getProgress, getProjects } from "@/lib/auth-api";
+import { getCurrentUser, getProfile, updateProfile, logoutUser, getProgress, getProjects, getStoredToken, ApiError } from "@/lib/auth-api";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Loader2, LogOut, Save, User as UserIcon, BookOpen, FolderOpen, Award, CheckCircle2 } from "lucide-react";
 
-export default function ProfilePage() {
+export default function ProfilePage({ setup = false, nextPath = "/dashboard" }: { setup?: boolean; nextPath?: string }) {
   const router = useRouter();
 
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -17,6 +18,8 @@ export default function ProfilePage() {
   const [projects, setProjects] = useState<CloudProject[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const submitting = useRef(false);
+  const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,47 +33,40 @@ export default function ProfilePage() {
   const [learningGoal, setLearningGoal] = useState("");
 
   useEffect(() => {
+    const token = getStoredToken();
+    if (!token) { router.replace("/login?next=/profile"); return; }
+    const controller = new AbortController();
+    const options = { token, signal: controller.signal };
     async function loadData() {
       try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-
-        const currentProfile = await getProfile();
-        setProfile(currentProfile);
-
-        // initialize form
-        setFullName(currentProfile.full_name || "");
-        setUserRole(currentProfile.user_role || "");
-        setInstitution(currentProfile.institution || "");
-        setBio(currentProfile.bio || "");
-        setExperienceLevel(currentProfile.experience_level || "");
-        setPreferredSdk(currentProfile.preferred_sdk || "");
-        setLearningGoal(currentProfile.learning_goal || "");
-
-        // load stats
-        const prog = await getProgress();
-        setProgress(prog);
-        const projs = await getProjects();
-        setProjects(projs);
-
-      } catch (err: any) {
-        if (err.message.includes("401") || err.message.includes("Credentials") || err.message.includes("Not authenticated")) {
-          router.replace("/login?next=/profile");
-        } else {
-          setError(err.message || "Failed to load profile");
-        }
+        const [currentUser, currentProfile, prog, projs] = await Promise.all([
+          getCurrentUser(options), getProfile(options), getProgress(options), getProjects(options),
+        ]);
+        if (controller.signal.aborted || getStoredToken() !== token) return;
+        setUser(currentUser); setProfile(currentProfile); setProgress(prog); setProjects(projs);
+        setFullName(currentProfile.full_name || ""); setUserRole(currentProfile.user_role || "Student");
+        setInstitution(currentProfile.institution || ""); setBio(currentProfile.bio || "");
+        setExperienceLevel(currentProfile.experience_level || "Beginner");
+        setPreferredSdk(currentProfile.preferred_sdk || "Qiskit"); setLearningGoal(currentProfile.learning_goal || "");
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) router.replace("/login?next=/profile");
+        else setError(error instanceof Error ? error.message : "Failed to load profile");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
-
-    loadData();
+    void loadData();
+    return () => controller.abort();
   }, [router]);
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!profile) return;
+    if (!profile || submitting.current) return;
+    submitting.current = true;
+    const token = getStoredToken();
+    setSaved(false);
 
     setSaving(true);
     setError("");
@@ -84,17 +80,20 @@ export default function ProfilePage() {
         experience_level: experienceLevel,
         preferred_sdk: preferredSdk,
         learning_goal: learningGoal,
-      });
+      }, { token });
+      if (getStoredToken() !== token) return;
 
       setProfile(updatedProfile);
 
       toast.success("Profile saved successfully");
-      router.replace("/dashboard");
+      setSaved(true);
+      if (setup) router.replace(nextPath);
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Could not save profile"
       );
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   };
@@ -112,11 +111,12 @@ export default function ProfilePage() {
     );
   }
 
-  if (error || !profile) {
+  if (!profile) {
     return (
       <div className="flex h-[70vh] items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">{error || "Could not load profile"}</p>
+          <Link href="/" className="mr-4 text-primary underline">Back to Home</Link>
           <button onClick={() => window.location.reload()} className="text-primary hover:underline">Try again</button>
         </div>
       </div>
@@ -136,6 +136,8 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto max-w-5xl p-5 sm:p-8">
       <Toaster />
+      <nav className="mb-6 flex gap-4 text-sm text-primary"><Link href="/dashboard">← Dashboard</Link><Link href="/">Home</Link></nav>
+      {setup && <p className="mb-6 text-muted-foreground">Set up your profile, then continue to your workspace.</p>}
       <div className="flex flex-col md:flex-row gap-8">
         {/* Left Column: Stats & Identity */}
         <div className="w-full md:w-1/3 space-y-6">
@@ -186,6 +188,8 @@ export default function ProfilePage() {
             </h2>
 
             <form onSubmit={handleSave} className="space-y-5">
+              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+              {saved && <p role="status" className="text-sm text-secondary">Profile saved successfully.</p>}
               <div className="grid sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Full Name</label>
@@ -278,7 +282,7 @@ export default function ProfilePage() {
                   className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-[0_0_20px_rgba(187,143,255,.2)] transition hover:shadow-[0_0_30px_rgba(187,143,255,.3)] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                  Save Changes
+                  {setup ? "Save and continue" : "Save Changes"}
                 </button>
               </div>
             </form>

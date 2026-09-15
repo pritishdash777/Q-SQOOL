@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState } from 'react';
 import { QuantumGateNode, simulateCircuit } from '@/lib/quantumSimulator';
-import { completeCheckpoint } from '@/backend/actions/progress';
+import { useProgress } from '@/components/progress/ProgressProvider';
 
 interface LessonCheckpointProps {
   userId: string;
@@ -22,7 +22,7 @@ export const LessonCheckpoint: React.FC<LessonCheckpointProps> = ({
   onSuccess,
 }) => {
   const [gates, setGates] = useState<QuantumGateNode[]>([]);
-  const [isPending, startTransition] = useTransition();
+  const { progress, completeLesson, loading: isPending } = useProgress();
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'idle'; message: string }>({
     type: 'idle',
     message: '',
@@ -52,27 +52,14 @@ export const LessonCheckpoint: React.FC<LessonCheckpointProps> = ({
       return;
     }
 
-    // 3. Trigger server action to award XP and register database progress
-    startTransition(async () => {
-      const res = await completeCheckpoint({
-        userId,
-        lessonId,
-        baseXP: xpReward,
-      });
-
-      if (res.success) {
-        setFeedback({
-          type: 'success',
-          message: `Challenge passed! +${res.xpGained} XP awarded.`,
-        });
-        if (onSuccess) onSuccess();
-      } else {
-        setFeedback({
-          type: 'error',
-          message: 'Passed locally, but failed to sync progress with the server.',
-        });
-      }
-    });
+    const moduleId = lessonId === 'intro-to-entanglement' ? 'entanglement' : lessonId;
+    if (!progress) {
+      setFeedback({ type: 'error', message: 'Progress is still loading. Please try again.' });
+      return;
+    }
+    completeLesson(moduleId, moduleId);
+    setFeedback({ type: 'success', message: 'Challenge passed. Completion recorded; check sync status for cloud saving.' });
+    onSuccess?.();
   };
 
   const handleQuickAdd = (gate: 'H' | 'CX') => {

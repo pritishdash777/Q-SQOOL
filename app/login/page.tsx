@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Home, Eye, EyeOff, Loader2 } from "lucide-react";
+import { safeNextPath } from "@/lib/navigation";
 import { registerUser, loginUser } from "@/lib/auth-api";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -13,7 +14,8 @@ import { Suspense } from "react";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/profile";
+  const nextPath = safeNextPath(searchParams.get("next"));
+  const submitting = useRef(false);
   
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -26,6 +28,8 @@ function LoginContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     setError(null);
     
@@ -41,11 +45,11 @@ function LoginContent() {
         toast.success("Account created successfully");
       }
       
-      const safeNextPath = nextPath.startsWith("/") ? nextPath : "/profile";
-      router.push(safeNextPath);
+      router.replace(isLogin ? nextPath : `/profile?setup=1&next=${encodeURIComponent(nextPath)}`);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -87,6 +91,7 @@ function LoginContent() {
             <button 
               type="button"
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${isLogin ? 'bg-secondary text-secondary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              disabled={loading}
               onClick={() => setIsLogin(true)}
             >
               Sign In
@@ -94,6 +99,7 @@ function LoginContent() {
             <button 
               type="button"
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${!isLogin ? 'bg-secondary text-secondary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              disabled={loading}
               onClick={() => setIsLogin(false)}
             >
               Register
@@ -103,9 +109,9 @@ function LoginContent() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Full Name</label>
+                <label htmlFor="full-name" className="text-sm font-medium text-foreground">Full Name</label>
                 <input 
-                  type="text" 
+                  id="full-name" autoComplete="name" type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ada Lovelace"
@@ -116,9 +122,9 @@ function LoginContent() {
             )}
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Email</label>
+              <label htmlFor="email" className="text-sm font-medium text-foreground">Email</label>
               <input 
-                type="email" 
+                id="email" autoComplete="email" type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="quantum@example.com"
@@ -128,9 +134,10 @@ function LoginContent() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Password</label>
+              <label htmlFor="password" className="text-sm font-medium text-foreground">Password</label>
               <div className="relative">
                 <input 
+                  id="password" autoComplete={isLogin ? "current-password" : "new-password"}
                   type={showPassword ? "text" : "password"} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -141,6 +148,7 @@ function LoginContent() {
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >

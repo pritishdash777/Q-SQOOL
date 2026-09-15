@@ -12,13 +12,19 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LandingExperience } from "@/components/landing/LandingExperience";
+import { LandingPage } from "@/components/landing/LandingPage";
 import { ScatterCard, ScatterText } from "@/components/effects/ScatterText";
 import { QuantumBackground } from "@/components/effects/QuantumBackground";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Progress } from "@/components/ui/progress";
 import { Page, GateName, CircuitGate, Circuit, SDK, RunState, DemoResult, ResultsTab, AIMode, AILevel, AIAnalysis, ProjectVersion, LocalProject } from "../lib/quantum-types";
-import { checkHealth, simulateCircuit, optimizeCircuit } from "../lib/api";
+import { simulateCircuit, optimizeCircuit } from "../lib/api";
+
+import { useProgress } from "@/components/progress/ProgressProvider";
+import SyncStatus from "@/components/progress/SyncStatus";
+import { getProfile, getStoredToken } from "@/lib/auth-api";
+import { lessonPath } from "@/lib/progress-storage";
 
 const initialCircuit: Circuit = { qubits: 3, gates: [{ id: 1, type: "H", qubit: 0, column: 1 }, { id: 2, type: "CX", qubit: 0, target: 1, column: 3 }] };
 
@@ -416,14 +422,18 @@ function Shell({ page, navigate, children }: { page: Page; navigate: (page: Page
   const [mobileOpen, setMobileOpen] = useState(false);
   const [initials, setInitials] = useState<string | null>(null);
 
+  const { progress: accountProgress } = useProgress();
+  const userId = accountProgress?.userId;
   useEffect(() => {
-    import("../lib/auth-api").then(api => {
-      api.getProfile().then(p => {
-        const init = p.full_name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase();
-        setInitials(init);
+    let active = true;
+    setInitials(null);
+    if (userId && userId !== "guest") {
+      getProfile({ token: getStoredToken() }).then(profile => {
+        if (active) setInitials(profile.full_name.split(" ").map(name => name[0]).join("").slice(0, 2).toUpperCase());
       }).catch(() => {});
-    });
-  }, []);
+    }
+    return () => { active = false; };
+  }, [userId]);
 
   return <main className={`quantum-grid min-h-screen ${page === "landing" ? "q-landing" : ""}`}><Ambient />
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[86px] flex-col items-center border-r border-border bg-sidebar/90 py-5 backdrop-blur-xl md:flex"><Brand compact goHome={() => navigate("landing")} /><nav className="mt-12 flex flex-1 flex-col gap-3">{navigation.map(({ id, label, icon: Icon }) => <button key={id} title={label} onClick={() => navigate(id)} className={`group relative grid size-12 place-items-center rounded-xl transition ${page === id || (page === "lesson" && id === "learning") ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"}`}>{(page === id || (page === "lesson" && id === "learning")) && <span className="absolute -left-[20px] h-7 w-0.5 rounded-full bg-primary shadow-[0_0_14px_#c6a7ff]" />}<Icon className="size-5" /><span className="pointer-events-none absolute left-14 z-50 w-max translate-x-2 rounded-lg border border-border bg-popover px-3 py-1.5 text-xs opacity-0 shadow-xl transition group-hover:translate-x-0 group-hover:opacity-100">{label}</span></button>)}</nav><button onClick={() => soon("Settings")} className="grid size-11 place-items-center rounded-xl text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground" aria-label="Settings"><Settings className="size-5" /></button></aside>
@@ -437,24 +447,33 @@ function Shell({ page, navigate, children }: { page: Page; navigate: (page: Page
 function Dashboard({ navigate }: { navigate: (page: Page) => void }) {
   const [firstName, setFirstName] = useState<string | null>(null);
 
+  const router = useRouter();
+  const { progress: accountProgress } = useProgress();
+  const userId = accountProgress?.userId;
+  const xp = accountProgress?.xp || 0;
+  const resumePath = lessonPath(accountProgress?.lastVisitedPath);
   useEffect(() => {
-    import("../lib/auth-api").then(api => {
-      api.getProfile().then(p => {
-        setFirstName(p.full_name.split(" ")[0]);
+    let active = true;
+    setFirstName(null);
+    if (userId && userId !== "guest") {
+      getProfile({ token: getStoredToken() }).then(profile => {
+        if (active) setFirstName(profile.full_name.split(" ")[0]);
       }).catch(() => {});
-    });
-  }, []);
+    }
+    return () => { active = false; };
+  }, [userId]);
 
   return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8">
-    <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-sm font-semibold tracking-[.16em] text-secondary uppercase">Level 4 · Quantum Scholar</p><h1 className="glow-text mt-2 text-4xl font-bold tracking-tight sm:text-6xl">Welcome {firstName ? `back, ${firstName}` : "to Q-SQOOL"}</h1><p className="mt-3 text-muted-foreground">Your next breakthrough is one experiment away.</p></div><div className="flex gap-3"><button onClick={() => navigate("lab")} className="flex items-center gap-2 rounded-xl border border-secondary/55 px-4 py-3 text-sm text-secondary transition hover:bg-secondary hover:text-secondary-foreground"><Plus className="size-4" /> New circuit</button><button onClick={() => soon("AI tutor")} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"><Bot className="size-4" /> Ask Q-AI</button></div></div>
+    <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-sm font-semibold tracking-[.16em] text-secondary uppercase">Level {Math.floor(xp / 1000) + 1} · Quantum Learner</p><h1 className="glow-text mt-2 text-4xl font-bold tracking-tight sm:text-6xl">Welcome {firstName ? `back, ${firstName}` : "to Q-SQOOL"}</h1><p className="mt-3 text-muted-foreground">Your next breakthrough is one experiment away.</p></div><div className="flex gap-3"><button onClick={() => navigate("lab")} className="flex items-center gap-2 rounded-xl border border-secondary/55 px-4 py-3 text-sm text-secondary transition hover:bg-secondary hover:text-secondary-foreground"><Plus className="size-4" /> New circuit</button><button onClick={() => soon("AI tutor")} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"><Bot className="size-4" /> Ask Q-AI</button></div></div>
+    <SyncStatus />
     <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_1fr_1.2fr_1.4fr]">
-      <article className="glass hover-rise rounded-2xl p-5"><div className="flex justify-between text-sm text-muted-foreground"><span>Total XP</span><Zap className="size-4 text-primary" /></div><p className="mt-5 text-4xl font-bold">4,500</p><Progress value={90} className="mt-5 bg-foreground/10[&>div]:bg-primary" /><p className="mt-2 text-right text-xs text-muted-foreground">500 to level 5</p></article>
+      <article className="glass hover-rise rounded-2xl p-5"><div className="flex justify-between text-sm text-muted-foreground"><span>Total XP</span><Zap className="size-4 text-primary" /></div><p className="mt-5 text-4xl font-bold">{xp}</p><Progress value={(xp % 1000) / 10} className="mt-5 bg-foreground/10[&>div]:bg-primary" /><p className="mt-2 text-right text-xs text-muted-foreground">{1000 - xp % 1000} XP to the next level</p></article>
       <article className="glass hover-rise rounded-2xl p-5"><div className="flex justify-between text-sm text-muted-foreground"><span>Learning streak</span><Flame className="size-4 text-secondary" /></div><p className="mt-5 text-4xl font-bold">12 <span className="text-base font-normal text-muted-foreground">days</span></p><div className="mt-5 flex gap-2">{[1, 1, 1, 1, 0].map((v, i) => <span key={i} className={`h-1.5 flex-1 rounded-full ${v ? "bg-secondary shadow-[0_0_10px_#43e7ff]" : "bg-white/10"}`} />)}</div></article>
       <article className="glass hover-rise relative overflow-hidden rounded-2xl p-5"><p className="text-sm text-muted-foreground">Skill mastery</p><div className="relative mx-auto mt-3 grid size-28 place-items-center"><div className="absolute inset-1 animate-[spin-slow_14s_linear_infinite] rounded-full border border-dashed border-secondary/40" /><div className="absolute inset-5 rounded-full border border-primary/40" /><span className="text-2xl font-bold">68%</span></div></article>
       <article className="glass rounded-2xl p-5"><p className="text-sm font-semibold">Quick tools</p><div className="mt-5 grid grid-cols-2 gap-3"><button onClick={() => soon("QASM import")} className="rounded-xl border border-border bg-white/[.025] p-4 text-sm transition hover:border-secondary/40"><Upload className="mx-auto mb-2 size-5" />Import QASM</button><button onClick={() => navigate("learning")} className="rounded-xl border border-border bg-white/[.025] p-4 text-sm transition hover:border-secondary/40"><BookOpen className="mx-auto mb-2 size-5" />Module library</button></div></article>
     </div>
     <div className="mt-4 grid gap-4 lg:grid-cols-[1.8fr_.9fr]"><div className="space-y-4">
-      <article className="glass rounded-2xl border-l-4 border-l-primary p-6"><p className="flex items-center gap-2 text-xs font-semibold tracking-[.14em] text-primary uppercase"><Sparkles className="size-4" /> Continue learning</p><div className="mt-5 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><h2 className="text-2xl font-semibold">Entanglement: Building a Bell State</h2><p className="mt-3 max-w-3xl leading-7 text-muted-foreground">Learn how Hadamard and controlled-X gates create correlations that cannot be separated into individual qubit states.</p></div><button onClick={() => navigate("lesson")} className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground">Resume</button></div><Progress value={60} className="mt-6 bg-foreground/10[&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" /></article>
+      <article className="glass rounded-2xl border-l-4 border-l-primary p-6"><p className="flex items-center gap-2 text-xs font-semibold tracking-[.14em] text-primary uppercase"><Sparkles className="size-4" /> Continue learning</p><div className="mt-5 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><h2 className="text-2xl font-semibold">{learningModules.find(module => resumePath.endsWith(`/${module.id}`))?.title || "Explore quantum lessons"}</h2><p className="mt-3 max-w-3xl leading-7 text-muted-foreground">Pick up your last lesson or choose a module from the learning path.</p></div><button onClick={() => router.push(resumePath)} className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground">Resume</button></div><Progress value={accountProgress?.modules[resumePath.split("/").at(-1) || ""]?.percent || 0} className="mt-6 bg-foreground/10[&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" /></article>
       <article className="glass rounded-2xl p-6"><div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-xl font-semibold"><FolderOpen className="size-5 text-primary" /> Recent projects</h2><button onClick={() => soon("Project storage")} className="text-sm text-secondary">View all</button></div><div className="mt-5 space-y-3">{[["Bell State Demo", "2 qubits · edited 2 hours ago"], ["VQE Experiment", "4 qubits · edited yesterday"]].map(([t, m]) => <button key={t} onClick={() => navigate("lab")} className="flex w-full items-center gap-4 rounded-xl border border-border bg-white/[.025] p-4 text-left transition hover:border-primary/40 hover:bg-primary/5"><span className="grid size-11 place-items-center rounded-xl bg-secondary/10 text-secondary"><Atom className="size-5" /></span><span><strong className="block">{t}</strong><span className="text-sm text-muted-foreground">{m}</span></span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></button>)}</div></article>
     </div><article className="glass rounded-2xl p-6"><h2 className="flex items-center gap-2 text-2xl font-semibold"><Wand2 className="size-5 text-secondary" /> Suggested path</h2><p className="mt-5 leading-7 text-muted-foreground">Based on your progress, Q-SQOOL recommends strengthening these concepts next.</p><div className="mt-7 space-y-7 border-l border-primary/30 pl-6">{[["Quantum Fourier Transform", "Ready · 2 hours"], ["Phase Estimation", "Requires QFT mastery"], ["Order Finding", "Final prerequisite"]].map(([a, b], i) => <div key={a} className="relative"><span className={`absolute -left-[31px] top-1 size-3 rounded-full border ${i === 0 ? "border-primary bg-primary shadow-[0_0_12px_#c6a7ff]" : "border-border bg-background"}`} /><p className={i ? "text-muted-foreground" : "font-semibold text-primary"}>{a}</p><p className="mt-1 text-sm text-muted-foreground">{b}</p>{i === 0 && <button onClick={() => navigate("learning")} className="mt-3 rounded-lg border border-primary/35 px-3 py-2 text-sm">Start module</button>}</div>)}</div><button onClick={() => soon("Personalised learning")} className="mt-9 flex items-center gap-2 text-sm text-secondary"><Settings className="size-4" />Customise path</button></article></div>
   </div>;
@@ -464,15 +483,31 @@ function Dashboard({ navigate }: { navigate: (page: Page) => void }) {
 
 
 function Learning({ openLesson, tryModule }: { openLesson: (id: string) => void; tryModule: (id: string) => void }) {
-  const defaultProgress: Record<string, number> = { qubits: 100, superposition: 100, measurement: 75, gates: 60, entanglement: 20 };
-  const [role, setRole] = useState("Student"), [progress, setProgress] = useState<Record<string, number>>(defaultProgress), [query, setQuery] = useState(""), [answers, setAnswers] = useState<number[]>([]), [assessed, setAssessed] = useState(false), [assessmentScore, setAssessmentScore] = useState(0);
-  useEffect(() => { try { const saved = localStorage.getItem("q-sqool-learning"); if (saved) { const data = JSON.parse(saved); setRole(data.role ?? "Student"); setProgress({ ...defaultProgress, ...data.progress }); } const assessment = localStorage.getItem("q-sqool-assessment"); if (assessment) { setAssessed(true); setAssessmentScore(JSON.parse(assessment).score ?? 0); } } catch { } }, []);
-  const chooseRole = (next: string) => { setRole(next); localStorage.setItem("q-sqool-learning", JSON.stringify({ role: next, progress })); };
+  const { progress: accountProgress } = useProgress();
+  const progress = Object.fromEntries(Object.entries(accountProgress?.modules || {}).map(([id, module]) => [id, module.percent]));
+  const scope = accountProgress?.userId;
+  const [role, setRole] = useState("Student"), [query, setQuery] = useState(""), [answers, setAnswers] = useState<number[]>([]), [assessed, setAssessed] = useState(false), [assessmentScore, setAssessmentScore] = useState(0);
+  useEffect(() => {
+    if (!scope) return;
+    try {
+      setRole(localStorage.getItem(`q-sqool-learning-role:${scope}`) || "Student");
+      const assessment = JSON.parse(localStorage.getItem(`q-sqool-assessment:${scope}`) || "null");
+      setAssessed(!!assessment); setAssessmentScore(assessment?.score || 0);
+    } catch { }
+  }, [scope]);
+  const chooseRole = (next: string) => {
+    setRole(next);
+    try { if (scope) localStorage.setItem(`q-sqool-learning-role:${scope}`, next); } catch { }
+  };
   const assessment = [{ q: "What does |α|² represent?", options: ["Phase", "Probability of measuring 0", "Gate depth"], a: 1 }, { q: "Which pair can cancel when consecutive?", options: ["H-H", "H-X", "CX-H"], a: 0 }, { q: "Grover search uses roughly…", options: ["N² queries", "√N queries", "Zero queries"], a: 1 }], score = answers.reduce((n, a, i) => n + (a === assessment[i].a ? 1 : 0), 0);
-  const finishAssessment = () => { setAssessed(true); setAssessmentScore(score); localStorage.setItem("q-sqool-assessment", JSON.stringify({ score, total: assessment.length, date: new Date().toISOString() })); };
-  const completed = Object.values(progress).filter(value => value >= 100).length, xp = 4500 + completed * 100, visible = learningModules.filter(m => `${m.title} ${m.summary}`.toLowerCase().includes(query.toLowerCase()));
+  const finishAssessment = () => {
+    setAssessed(true); setAssessmentScore(score);
+    try { if (scope) localStorage.setItem(`q-sqool-assessment:${scope}`, JSON.stringify({ score })); } catch { }
+  };
+  const completed = accountProgress?.completedModules || 0, xp = accountProgress?.xp || 0, visible = learningModules.filter(m => `${m.title} ${m.summary}`.toLowerCase().includes(query.toLowerCase()));
   const unlocked = (module: LearningModule) => module.prereqs.every(id => (progress[id] ?? 0) >= 60), recommended = assessed && assessmentScore < 2 ? ["qubits", "superposition", "measurement"] : role === "Student" ? ["measurement", "gates", "entanglement"] : role === "Researcher" ? ["qft", "vqe-qaoa", "teleportation"] : ["circuits", "grover", "vqe-qaoa"];
   return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8"><div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-sm font-semibold uppercase tracking-[.16em] text-secondary">Personalised curriculum</p><h1 className="glow-text mt-2 text-4xl font-bold sm:text-5xl">Quantum Learning Hub</h1><p className="mt-3 max-w-2xl text-muted-foreground">Concept-first lessons that connect mathematical meaning to circuits you can build and inspect.</p></div><label className="glass flex min-w-[280px] items-center gap-3 rounded-xl px-4 py-3"><Search className="size-4 text-muted-foreground" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search concepts..." className="w-full bg-transparent text-sm outline-none" /></label></div>
+    <SyncStatus />
     <div className="mt-7 grid gap-4 xl:grid-cols-[1.15fr_.85fr]"><section className="glass rounded-2xl p-5"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose your learning role</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{[["Student", "Build strong foundations"], ["Researcher", "Prioritise theory and experiments"], ["Professional", "Focus on applications and workflows"]].map(([name, copy]) => <button key={name} onClick={() => chooseRole(name)} className={`role-card ${role === name ? "active" : ""}`}><strong>{name}</strong><span>{copy}</span></button>)}</div><div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4"><p className="text-sm font-semibold text-primary">Recommended for {role}</p><div className="mt-3 flex flex-wrap gap-2">{recommended.map(id => { const module = learningModules.find(m => m.id === id)!; return <button key={id} onClick={() => openLesson(id)} className="rounded-lg border border-border px-3 py-2 text-xs hover:border-secondary">{module.title}</button> })}</div></div></section><section className="glass rounded-2xl p-5"><div className="grid grid-cols-3 gap-3 text-center"><div><strong className="block text-2xl text-primary">{xp}</strong><span className="text-xs text-muted-foreground">XP</span></div><div><strong className="block text-2xl text-secondary">12</strong><span className="text-xs text-muted-foreground">Day streak</span></div><div><strong className="block text-2xl">{completed}</strong><span className="text-xs text-muted-foreground">Mastered</span></div></div><div className="mt-5 flex flex-wrap gap-2">{["First Circuit", "State Explorer", completed >= 3 ? "Foundation Builder" : "Next: Foundation Builder"].map((badge, i) => <span key={badge} className={`achievement ${i === 2 && completed < 3 ? "locked" : ""}`}>✦ {badge}</span>)}</div></section></div>
     <section className="glass mt-4 rounded-2xl p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">Beginner skill assessment</h2><p className="mt-1 text-sm text-muted-foreground">Three quick checks tune your suggested starting point.</p></div>{assessed && <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">Completed · {assessmentScore}/3</span>}</div>{!assessed && <div className="mt-5 grid gap-4 lg:grid-cols-3">{assessment.map((item, i) => <div key={item.q} className="rounded-xl border border-border p-4"><p className="min-h-12 text-sm font-medium">{i + 1}. {item.q}</p><div className="mt-3 space-y-2">{item.options.map((option, j) => <button key={option} onClick={() => setAnswers(current => { const next = [...current]; next[i] = j; return next; })} className={`block w-full rounded-lg border p-2 text-left text-xs ${answers[i] === j ? "border-secondary bg-secondary/10" : "border-border"}`}>{option}</button>)}</div></div>)}<button disabled={answers.filter(a => a !== undefined).length < 3} onClick={finishAssessment} className="rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground disabled:opacity-40 lg:col-span-3">Finish assessment</button></div>}</section>
     <div className="mt-8 flex items-center gap-3"><Layers className="size-5 text-primary" /><h2 className="text-2xl font-semibold">Learning path</h2><span className="text-sm text-muted-foreground">{visible.length} modules</span></div><div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visible.map(module => { const available = unlocked(module), value = progress[module.id] ?? 0; return <article key={module.id} className={`glass learning-card ${available ? "" : "locked"}`}><div className="flex items-center justify-between"><span className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">{module.category}</span>{available ? <span className="text-xs text-secondary">{module.difficulty}</span> : <Lock className="size-4 text-muted-foreground" />}</div><h3 className="mt-5 text-xl font-semibold">{module.title}</h3><p className="mt-3 min-h-18 text-sm leading-6 text-muted-foreground">{module.summary}</p><div className="mt-4 flex justify-between text-xs text-muted-foreground"><span>{module.minutes} min</span><span>{value}%</span></div><Progress value={value} className="mt-2 bg-foreground/10[&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" /><p className="mt-3 min-h-8 text-xs text-muted-foreground">{module.prereqs.length ? `Prerequisites: ${module.prereqs.map(id => learningModules.find(m => m.id === id)?.title).join(", ")}` : "No prerequisites"}</p><div className="mt-4 grid grid-cols-2 gap-2"><button disabled={!available} onClick={() => openLesson(module.id)} className="rounded-lg border border-primary/35 p-2 text-sm text-primary disabled:opacity-35">Open lesson</button><button disabled={!available} onClick={() => tryModule(module.id)} className="rounded-lg border border-secondary/35 p-2 text-sm text-secondary disabled:opacity-35">Try in Composer</button></div></article> })}</div>
@@ -480,60 +515,68 @@ function Learning({ openLesson, tryModule }: { openLesson: (id: string) => void;
 }
 
 function Lesson({ module, navigate, setCircuit }: { module: LearningModule; navigate: (page: Page) => void; setCircuit: React.Dispatch<React.SetStateAction<Circuit>> }) {
-  const [answer, setAnswer] = useState<number>(), [step, setStep] = useState(0), [savedProgress, setSavedProgress] = useState(0); const correct = answer === module.quiz.answer;
-  useEffect(() => { try { const data = JSON.parse(localStorage.getItem("q-sqool-learning") || "{}"); setSavedProgress(data.progress?.[module.id] ?? 0); } catch { } }, [module.id]);
-  const advance = (nextStep: number) => { setStep(nextStep); try { const data = JSON.parse(localStorage.getItem("q-sqool-learning") || "{}"); const value = Math.round((nextStep / module.steps.length) * 70), progress = { ...(data.progress ?? {}), [module.id]: Math.max(data.progress?.[module.id] ?? 0, value) }; localStorage.setItem("q-sqool-learning", JSON.stringify({ ...data, progress })); setSavedProgress(progress[module.id]); } catch { } };
-  const finish = () => { if (!correct) return; try { const data = JSON.parse(localStorage.getItem("q-sqool-learning") || "{}"); const progress = { ...(data.progress ?? {}), [module.id]: 100 }; localStorage.setItem("q-sqool-learning", JSON.stringify({ ...data, progress })); setSavedProgress(100); toast.success("Lesson completed · +100 XP"); } catch { } };
+  const { progress, loading, completeLesson, updateModule } = useProgress();
+  const [answer, setAnswer] = useState<number>(), [currentStep, setStep] = useState(0);
+  const saved = progress?.modules[module.id];
+  const savedProgress = saved?.percent || 0;
+  const step = Math.max(currentStep, saved?.completedLessons.filter(id => id.startsWith(`${module.id}:step-`)).length || 0);
+  const correct = answer === module.quiz.answer;
+  const advance = (nextStep: number) => {
+    setStep(nextStep);
+    updateModule(module.id, { percent: Math.round(nextStep / module.steps.length * 70),
+      completedLessons: [`${module.id}:step-${nextStep}`] });
+  };
+  const finish = () => {
+    if (!correct || !progress || saved?.completed) return;
+    completeLesson(module.id, module.id);
+    toast.success("Lesson completed");
+  };
   const tryIt = () => { setCircuit(starterCircuit(module.id)); navigate("lab"); };
   const lessonProgress = Math.max(savedProgress, Math.round((step / module.steps.length) * 70) + (correct ? 30 : 0));
-  return <div className="page-enter mx-auto max-w-[1400px] p-5 sm:p-8"><button onClick={() => navigate("learning")} className="text-sm text-secondary">← Learning path</button><div className="mt-5 grid gap-5 xl:grid-cols-[1fr_360px]"><main><p className="text-sm font-semibold uppercase tracking-[.15em] text-secondary">{module.category} · {module.difficulty} · {module.minutes} min</p><h1 className="glow-text mt-3 text-4xl font-bold sm:text-6xl">{module.title}</h1><p className="mt-5 max-w-4xl text-lg leading-8 text-muted-foreground">{module.summary}</p><div className="mt-7 flex items-center gap-3"><Progress value={lessonProgress} className="bg-foreground/10[&>div]:bg-secondary" /><span className="text-sm text-secondary">{lessonProgress}%</span></div><section className="mt-6 grid gap-4 lg:grid-cols-2"><article className="glass rounded-2xl p-6"><h2 className="text-xl font-semibold">Core idea</h2><p className="mt-4 leading-7 text-muted-foreground">{module.concept}</p><div className="mt-5 overflow-x-auto rounded-xl border border-primary/25 bg-primary/5 p-4 font-mono text-sm text-primary">{module.math}</div></article><article className="glass rounded-2xl p-6"><h2 className="text-xl font-semibold">Why it matters</h2><p className="mt-4 leading-7 text-muted-foreground">{module.why}</p><h3 className="mt-6 text-sm font-semibold text-secondary">Remember</h3><ul className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">{module.keyPoints.map(point => <li key={point} className="flex gap-2"><CheckCircle2 className="mt-1 size-4 shrink-0 text-secondary" />{point}</li>)}</ul></article></section><section className="glass mt-4 rounded-2xl p-6"><h2 className="text-xl font-semibold">Interactive checkpoint</h2><p className="mt-2 text-sm text-muted-foreground">Advance one step at a time and explain what changes before continuing.</p><div className="mt-5 space-y-3">{module.steps.map((text, i) => <button key={text} onClick={() => i <= step && advance(Math.min(module.steps.length, i + 1))} disabled={i > step} className={`checkpoint ${i < step ? "done" : i === step ? "active" : ""}`}><span>{i < step ? "✓" : i + 1}</span><p>{text}</p></button>)}</div></section><section className="glass mt-4 rounded-2xl border-l-4 border-l-secondary p-6"><h2 className="text-xl font-semibold">Knowledge check</h2><p className="mt-4 leading-7 text-muted-foreground">{module.quiz.question}</p><div className="mt-4 grid gap-2 sm:grid-cols-2">{module.quiz.options.map((option, i) => <button key={option} onClick={() => setAnswer(i)} className={`rounded-xl border p-3 text-left text-sm ${answer === i ? (correct ? "border-emerald-400/50 bg-emerald-400/10" : "border-rose-400/50 bg-rose-400/10") : "border-border"}`}>{option}</button>)}</div>{answer !== undefined && <p className={`mt-4 text-sm ${correct ? "text-emerald-300" : "text-rose-300"}`}>{correct ? module.quiz.explanation : "Not quite—review the core idea and try again."}</p>}<button onClick={finish} disabled={!correct} className="mt-4 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-35">Complete lesson</button></section></main><aside className="space-y-4"><article className="glass sticky top-24 rounded-2xl p-5"><p className="text-xs font-semibold uppercase tracking-wider text-secondary">From concept to circuit</p><h2 className="mt-3 text-xl font-semibold">Experiment with {module.title}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Load a curated starter circuit, modify its gates, ask the demo Copilot to explain it, and run the deterministic simulator.</p><div className="mt-5 ai-circuit-strip">{starterCircuit(module.id).gates.map(g => <span key={g.id}>{g.type}<small>q{g.qubit}</small></span>)}</div><button onClick={tryIt} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-secondary p-3 font-semibold text-secondary-foreground">Try in Composer <ArrowRight className="size-4" /></button></article></aside></div></div>;
+  return <div className="page-enter mx-auto max-w-[1400px] p-5 sm:p-8"><button onClick={() => navigate("learning")} className="text-sm text-secondary">← Learning path</button><SyncStatus /><div className="mt-5 grid gap-5 xl:grid-cols-[1fr_360px]"><main><p className="text-sm font-semibold uppercase tracking-[.15em] text-secondary">{module.category} · {module.difficulty} · {module.minutes} min</p><h1 className="glow-text mt-3 text-4xl font-bold sm:text-6xl">{module.title}</h1><p className="mt-5 max-w-4xl text-lg leading-8 text-muted-foreground">{module.summary}</p><div className="mt-7 flex items-center gap-3"><Progress value={lessonProgress} className="bg-foreground/10[&>div]:bg-secondary" /><span className="text-sm text-secondary">{lessonProgress}%</span></div><section className="mt-6 grid gap-4 lg:grid-cols-2"><article className="glass rounded-2xl p-6"><h2 className="text-xl font-semibold">Core idea</h2><p className="mt-4 leading-7 text-muted-foreground">{module.concept}</p><div className="mt-5 overflow-x-auto rounded-xl border border-primary/25 bg-primary/5 p-4 font-mono text-sm text-primary">{module.math}</div></article><article className="glass rounded-2xl p-6"><h2 className="text-xl font-semibold">Why it matters</h2><p className="mt-4 leading-7 text-muted-foreground">{module.why}</p><h3 className="mt-6 text-sm font-semibold text-secondary">Remember</h3><ul className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">{module.keyPoints.map(point => <li key={point} className="flex gap-2"><CheckCircle2 className="mt-1 size-4 shrink-0 text-secondary" />{point}</li>)}</ul></article></section><section className="glass mt-4 rounded-2xl p-6"><h2 className="text-xl font-semibold">Interactive checkpoint</h2><p className="mt-2 text-sm text-muted-foreground">Advance one step at a time and explain what changes before continuing.</p><div className="mt-5 space-y-3">{module.steps.map((text, i) => <button key={text} onClick={() => i <= step && advance(Math.min(module.steps.length, i + 1))} disabled={loading || !progress || i > step} className={`checkpoint ${i < step ? "done" : i === step ? "active" : ""}`}><span>{i < step ? "✓" : i + 1}</span><p>{text}</p></button>)}</div></section><section className="glass mt-4 rounded-2xl border-l-4 border-l-secondary p-6"><h2 className="text-xl font-semibold">Knowledge check</h2><p className="mt-4 leading-7 text-muted-foreground">{module.quiz.question}</p><div className="mt-4 grid gap-2 sm:grid-cols-2">{module.quiz.options.map((option, i) => <button key={option} onClick={() => setAnswer(i)} className={`rounded-xl border p-3 text-left text-sm ${answer === i ? (correct ? "border-emerald-400/50 bg-emerald-400/10" : "border-rose-400/50 bg-rose-400/10") : "border-border"}`}>{option}</button>)}</div>{answer !== undefined && <p className={`mt-4 text-sm ${correct ? "text-emerald-300" : "text-rose-300"}`}>{correct ? module.quiz.explanation : "Not quite—review the core idea and try again."}</p>}<button onClick={finish} disabled={loading || !progress || !correct || saved?.completed} className="mt-4 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-35">{saved?.completed ? "Lesson completed" : "Complete lesson"}</button></section></main><aside className="space-y-4"><article className="glass sticky top-24 rounded-2xl p-5"><p className="text-xs font-semibold uppercase tracking-wider text-secondary">From concept to circuit</p><h2 className="mt-3 text-xl font-semibold">Experiment with {module.title}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">Load a curated starter circuit, modify its gates, ask the demo Copilot to explain it, and run the deterministic simulator.</p><div className="mt-5 ai-circuit-strip">{starterCircuit(module.id).gates.map(g => <span key={g.id}>{g.type}<small>q{g.qubit}</small></span>)}</div><button onClick={tryIt} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-secondary p-3 font-semibold text-secondary-foreground">Try in Composer <ArrowRight className="size-4" /></button></article></aside></div></div>;
 }
 
 function AICopilot({ circuit, onApply, onHighlight }: { circuit: Circuit; onApply: (next: Circuit) => void; onHighlight: (ids: number[]) => void }) {
-  const [mode, setMode] = useState<AIMode>("Optimise"), [level, setLevel] = useState<AILevel>("Beginner"), [analysis, setAnalysis] = useState<AIAnalysis>(), [stream, setStream] = useState(""), [busy, setBusy] = useState(false), [preview, setPreview] = useState(false), timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-  useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
-  const run = async () => {
-    if (timer.current) clearInterval(timer.current);
-    setAnalysis(undefined); setPreview(false); setStream(""); setBusy(true); onHighlight([]);
-
-    let next: AIAnalysis;
-    if (mode === "Optimise") {
-      const isHealthy = await checkHealth();
-      if (isHealthy) {
-        try {
-          const res = await optimizeCircuit(circuit);
-          next = { ...res, title: `${res.title} (Backend)` };
-        } catch (err: any) {
-          toast.error(err.message || "Optimization failed");
-          setBusy(false);
-          return;
-        }
-      } else {
-        next = { ...analyseCircuit(circuit, mode, level), title: "Demo Mode: Optimise" };
-      }
-    } else {
-      next = { ...analyseCircuit(circuit, mode, level), title: `Demo Mode: ${mode}` };
-    }
-
-    setAnalysis(next); onHighlight(next.gateIds);
-    let i = 0;
-    timer.current = setInterval(() => {
-      i += 3; setStream(next.text.slice(0, i));
-      if (i >= next.text.length) { if (timer.current) clearInterval(timer.current); setBusy(false); }
-    }, 22);
+  const [mode, setMode] = useState<AIMode>("Optimise"), [level, setLevel] = useState<AILevel>("Beginner"), [analysis, setAnalysis] = useState<AIAnalysis>(), [stream, setStream] = useState(""), [busy, setBusy] = useState(false), [preview, setPreview] = useState(false);
+  const [error, setError] = useState("");
+  const request = useRef<AbortController | null>(null);
+  useEffect(() => {
+    request.current?.abort(); request.current = null;
+    setBusy(false); setAnalysis(undefined); setStream(""); setPreview(false); setError("");
+    onHighlight([]);
+    return () => { request.current?.abort(); request.current = null; };
+  }, [circuit, mode, level, onHighlight]);
+  const dismiss = () => {
+    request.current?.abort(); request.current = null;
+    setBusy(false); setAnalysis(undefined); setStream(""); setPreview(false); setError(""); onHighlight([]);
   };
-  const dismiss = () => { if (timer.current) clearInterval(timer.current); setBusy(false); setAnalysis(undefined); setStream(""); setPreview(false); onHighlight([]); };
-  const apply = () => { if (!analysis) return; onApply(analysis.after); toast.success("Circuit updated"); dismiss(); };
+  const run = async () => {
+    if (request.current) return;
+    const controller = new AbortController(); request.current = controller;
+    setBusy(true); setError(""); setAnalysis(undefined); setPreview(false); setStream(""); onHighlight([]);
+    try {
+      const next = mode === "Optimise"
+        ? { ...await optimizeCircuit(circuit, controller.signal), before: circuit }
+        : { ...analyseCircuit(circuit, mode, level), title: `Frontend teaching guidance: ${mode}` };
+      if (controller.signal.aborted || request.current !== controller) return;
+      setAnalysis(next); setStream(next.text); onHighlight(next.gateIds);
+    } catch (error) {
+      if (!controller.signal.aborted && request.current === controller) setError(error instanceof Error ? error.message : "Optimization failed. Please retry.");
+    } finally {
+      if (request.current === controller) { request.current = null; setBusy(false); }
+    }
+  };
+  const apply = () => { if (!analysis || analysis.before !== circuit) return; onApply(analysis.after); toast.success("Circuit updated"); dismiss(); };
   const changed = analysis && analysis.before.gates.length !== analysis.after.gates.length, reduction = analysis?.reductionPercent ?? (analysis && analysis.before.gates.length ? Math.round((1 - analysis.after.gates.length / analysis.before.gates.length) * 100) : 0);
   const strip = (value: Circuit) => <div className="ai-circuit-strip">{[...value.gates].sort((a, b) => a.column - b.column).map(g => <span key={g.id}>{g.type}<small>q{g.qubit}</small></span>)}{!value.gates.length && <em>Empty circuit</em>}</div>;
-  return <aside className="glass flex min-h-[620px] flex-col rounded-2xl"><div className="flex items-center gap-3 border-b border-border p-5"><Bot className="size-5 text-secondary" /><div><p className="font-semibold">Q-AI Demo</p><p className="text-xs text-muted-foreground">Circuit guidance and optimization</p></div></div><div className="grid grid-cols-3 border-b border-border">{(["Optimise", "Explain", "Detect Errors"] as AIMode[]).map(name => <button key={name} onClick={() => { setMode(name); dismiss(); }} className={`p-3 text-xs ${mode === name ? "border-b-2 border-secondary bg-secondary/5 text-secondary" : "text-muted-foreground"}`}>{name}</button>)}</div><div className="p-4"><div className="grid grid-cols-2 gap-2">{(["Beginner", "Technical"] as AILevel[]).map(name => <button key={name} onClick={() => setLevel(name)} aria-pressed={level === name} className={`rounded-lg border p-2 text-xs ${level === name ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{name}</button>)}</div><button onClick={run} disabled={busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-secondary p-3 text-sm font-semibold text-secondary-foreground disabled:opacity-50"><Sparkles className="size-4" />{busy ? "Analysing…" : `${mode} circuit`}</button></div><div className="flex-1 px-4 pb-4">{!analysis ? <div className="rounded-xl border border-dashed border-border p-5 text-center text-sm leading-6 text-muted-foreground">Choose a mode and run the Q-AI.</div> : <div className="ai-response"><p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200">AI-generated suggestion—verify before use</p><h3 className="mt-3 font-semibold">{analysis.title}</h3><p className="mt-3 min-h-16 text-sm leading-6 text-muted-foreground">{stream}{busy && <span className="stream-caret" />}</p>{analysis.warning && <p className="mt-3 rounded-lg border border-amber-400/25 bg-amber-400/8 p-3 text-xs leading-5 text-amber-200"><TriangleAlert className="mr-1 inline size-3" />{analysis.warning}</p>}{preview && <div className="mt-4 space-y-3"><div><p className="ai-label">Before · {analysis.before.gates.length} gates</p>{strip(analysis.before)}</div><div><p className="ai-label">After · {analysis.after.gates.length} gates</p>{strip(analysis.after)}</div><p className="text-xs text-secondary">Estimated reduction: {Math.max(0, reduction)}%</p></div>}<div className="mt-4 grid grid-cols-3 gap-2"><button onClick={() => setPreview(true)} className="ai-action">Preview</button><button onClick={apply} disabled={!changed} className="ai-action primary">Apply</button><button onClick={dismiss} className="ai-action">Dismiss</button></div></div>}</div></aside>;
+  return <aside className="glass flex min-h-[620px] flex-col rounded-2xl"><div className="flex items-center gap-3 border-b border-border p-5"><Bot className="size-5 text-secondary" /><div><p className="font-semibold">Q-AI Demo</p><p className="text-xs text-muted-foreground">Circuit guidance and optimization</p></div></div><div className="grid grid-cols-3 border-b border-border">{(["Optimise", "Explain", "Detect Errors"] as AIMode[]).map(name => <button key={name} onClick={() => { setMode(name); dismiss(); }} className={`p-3 text-xs ${mode === name ? "border-b-2 border-secondary bg-secondary/5 text-secondary" : "text-muted-foreground"}`}>{name}</button>)}</div><div className="p-4"><div className="grid grid-cols-2 gap-2">{(["Beginner", "Technical"] as AILevel[]).map(name => <button key={name} onClick={() => { dismiss(); setLevel(name); }} aria-pressed={level === name} className={`rounded-lg border p-2 text-xs ${level === name ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{name}</button>)}</div><button onClick={run} disabled={busy} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-secondary p-3 text-sm font-semibold text-secondary-foreground disabled:opacity-50"><Sparkles className="size-4" />{busy ? "Analysing…" : `${mode} circuit`}</button>{busy && <button onClick={dismiss} className="mt-2 text-sm underline">Stop waiting</button>}{error && <div role="alert" className="mt-3 text-sm text-destructive"><p>{error}</p><button onClick={run} className="mt-2 underline">Retry optimization</button></div>}</div><div className="flex-1 px-4 pb-4">{!analysis ? <div className="rounded-xl border border-dashed border-border p-5 text-center text-sm leading-6 text-muted-foreground">Choose a mode and run the Q-AI.</div> : <div className="ai-response"><p className="text-[10px] font-semibold uppercase tracking-wider text-amber-200">{mode === "Optimise" ? "Backend optimization · Review before applying" : "Frontend teaching guidance · Not backend analysis"}</p><h3 className="mt-3 font-semibold">{analysis.title}</h3><p className="mt-3 min-h-16 text-sm leading-6 text-muted-foreground">{stream}{busy && <span className="stream-caret" />}</p>{analysis.warning && <p className="mt-3 rounded-lg border border-amber-400/25 bg-amber-400/8 p-3 text-xs leading-5 text-amber-200"><TriangleAlert className="mr-1 inline size-3" />{analysis.warning}</p>}{preview && <div className="mt-4 space-y-3"><div><p className="ai-label">Before · {analysis.before.gates.length} gates</p>{strip(analysis.before)}</div><div><p className="ai-label">After · {analysis.after.gates.length} gates</p>{strip(analysis.after)}</div><p className="text-xs text-secondary">Estimated reduction: {Math.max(0, reduction)}%</p></div>}<div className="mt-4 grid grid-cols-3 gap-2"><button onClick={() => setPreview(true)} className="ai-action">Preview</button><button onClick={apply} disabled={!changed} className="ai-action primary">Apply</button><button onClick={dismiss} className="ai-action">Dismiss</button></div></div>}</div></aside>;
 }
 
 function ResultsWorkspace({ result, circuit, shots }: { result: DemoResult; circuit: Circuit; shots: number }) {
-  const tabs: ResultsTab[] = ["Histogram", "Probabilities", "Statevector", "Phase", "Bloch sphere", "Density matrix", "Execution stepper"], [tab, setTab] = useState<ResultsTab>("Histogram"), [step, setStep] = useState(0);
+  const tabs: ResultsTab[] = ["Histogram", "Probabilities"], [tab, setTab] = useState<ResultsTab>("Histogram"), [step, setStep] = useState(0);
   const states = Object.entries(result.probabilities), ordered = [...circuit.gates].sort((a, b) => a.column - b.column || a.qubit - b.qubit), current = ordered[step - 1], phase = (step * 47) % 360;
   return <div><div className="results-tabs" role="tablist" aria-label="Quantum result visualisations">{tabs.map(name => <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>{name}</button>)}</div><div className="result-view" role="tabpanel">
-    {tab === "Histogram" && <div className="flex h-44 items-end gap-3">{states.map(([state, p]) => <div key={state} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><span className="text-xs text-secondary">{Math.round(p * shots)}</span><div style={{ height: `${Math.max(p * 100, 2)}%` }} className="result-bar" /><span className="font-mono text-xs text-muted-foreground">|{state}⟩</span></div>)}</div>}
+    {tab === "Histogram" && <div className="flex h-44 items-end gap-3">{states.map(([state, p]) => <div key={state} className="flex h-full flex-1 flex-col justify-end gap-2 text-center"><span className="text-xs text-secondary">{result.counts?.[state] ?? Math.round(p * shots)}</span><div style={{ height: `${Math.max(p * 100, 2)}%` }} className="result-bar" /><span className="font-mono text-xs text-muted-foreground">|{state}⟩</span></div>)}</div>}
     {tab === "Probabilities" && <div className="overflow-hidden rounded-xl border border-border">{states.map(([state, p]) => <div key={state} className="grid grid-cols-[1fr_1fr_1.4fr] border-b border-border p-3 text-sm last:border-0"><span className="font-mono">|{state}⟩</span><span>{(p * 100).toFixed(1)}%</span><span className="h-2 self-center rounded-full bg-foreground/5"><span style={{ width: `${p * 100}%` }} className="block h-full rounded-full bg-secondary" /></span></div>)}</div>}
     {tab === "Statevector" && <div className="grid gap-3 sm:grid-cols-2">{states.map(([state, p], i) => <div key={state} className="rounded-xl border border-border bg-foreground/5 p-4"><p className="font-mono text-primary">{Math.sqrt(p).toFixed(3)}{i % 2 ? " + 0.000i" : " − 0.000i"}</p><p className="mt-2 text-xs text-muted-foreground">Amplitude of |{state}⟩</p></div>)}</div>}
     {tab === "Phase" && <div className="phase-panel">{states.map(([state, p], i) => <div key={state} className="phase-item"><div className="phase-dial"><span style={{ transform: `rotate(${i * 90 + phase}deg)` }} /></div><p className="font-mono text-xs">|{state}⟩ · {i * 90 + phase}°</p><small>magnitude {Math.sqrt(p).toFixed(3)}</small></div>)}</div>}
@@ -544,46 +587,38 @@ function ResultsWorkspace({ result, circuit, shots }: { result: DemoResult; circ
 }
 
 function SimulationPanel({ circuit }: { circuit: Circuit }) {
-  const [simulator, setSimulator] = useState("Qiskit Aer"), [shots, setShots] = useState(1024), [noise, setNoise] = useState("Ideal"), [status, setStatus] = useState<RunState>("initial"), [result, setResult] = useState<DemoResult>(), timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const stopTimers = () => { timers.current.forEach(clearTimeout); timers.current = []; };
-  useEffect(() => () => stopTimers(), []);
+  const [simulator, setSimulator] = useState("Qiskit Aer"), [shots, setShots] = useState(1024), [noise, setNoise] = useState("Ideal"), [status, setStatus] = useState<RunState>("initial"), [result, setResult] = useState<DemoResult>();
+  const [error, setError] = useState("");
+  const request = useRef<AbortController | null>(null);
+  useEffect(() => {
+    request.current?.abort(); request.current = null;
+    setStatus("initial"); setResult(undefined); setError("");
+    return () => { request.current?.abort(); request.current = null; };
+  }, [circuit, shots, simulator, noise]);
   const run = async () => {
-    stopTimers(); setResult(undefined);
-    if (!circuit.gates.length) { setStatus("failed"); return; }
-    setStatus("queued");
-
-    const isHealthy = await checkHealth();
-
-    if (isHealthy) {
-      setStatus("running");
-      try {
-        const res = await simulateCircuit(circuit, shots);
-        setResult({
-          name: res.name || "Quantum circuit",
-          probabilities: res.probabilities || {},
-          counts: res.counts,
-          executionMs: res.executionMs,
-          simulator: res.simulator || "qiskit_aer",
-          note: res.note || "Backend execution successful."
-        });
-        setStatus("completed");
-      } catch (err: any) {
-        toast.error(err.message || "Simulation failed");
-        setStatus("failed");
-      }
-    } else {
-      timers.current = [
-        setTimeout(() => setStatus("running"), 500),
-        setTimeout(() => {
-          const demoResult = recogniseCircuit(circuit);
-          setResult({ ...demoResult, note: "Demo Mode: " + demoResult.note });
-          setStatus("completed");
-        }, 1650)
-      ];
+    if (request.current) return;
+    if (!circuit.gates.length) { setError("Add at least one gate before running the circuit."); setStatus("failed"); return; }
+    const controller = new AbortController(); request.current = controller;
+    setResult(undefined); setError(""); setStatus("running");
+    try {
+      const res = await simulateCircuit(circuit, shots, controller.signal);
+      if (controller.signal.aborted || request.current !== controller) return;
+      setResult({ ...res, name: res.name || "Quantum circuit", note: res.note || "Backend execution successful." });
+      setStatus("completed");
+    } catch (error) {
+      if (controller.signal.aborted || request.current !== controller) return;
+      setError(error instanceof Error ? error.message : "Simulation failed. Please retry."); setStatus("failed");
+    } finally {
+      if (request.current === controller) request.current = null;
     }
   };
-  const cancel = () => { stopTimers(); setStatus("initial"); setResult(undefined); };
-  const progress = status === "queued" ? 22 : status === "running" ? 68 : status === "completed" ? 100 : 0, executionMs = result?.executionMs ?? Math.round(35 + circuit.gates.length * 7 + shots / 64 + (noise === "Ideal" ? 0 : 18));
+  const cancel = () => {
+    request.current?.abort(); request.current = null;
+    setStatus("initial"); setResult(undefined);
+    toast.info("Stopped waiting for the result. Backend computation may continue.");
+  };
+  const progress = status === "queued" ? 22 : status === "running" ? 68 : status === "completed" ? 100 : 0;
+  const executionMs = result?.executionMs;
 
   const isBackendResult = result?.simulator === "qiskit_aer";
   const isDemoResult = Boolean(result && !isBackendResult);
@@ -591,7 +626,7 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
   const simName = isBackendResult
     ? "Qiskit Aer"
     : isDemoResult
-      ? "Frontend fallback"
+      ? "Frontend illustration"
       : "Awaiting execution";
 
   const sourceLabel =
@@ -608,7 +643,7 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
   const sourceDescription = isBackendResult
     ? "Circuit executed through the Q-SQOOL FastAPI backend."
     : isDemoResult
-      ? "Backend unavailable—showing deterministic frontend fallback results."
+      ? "Illustrative teaching example; not a simulation of this circuit."
       : "Run the circuit using the connected Qiskit Aer backend.";
 
   return (
@@ -713,7 +748,7 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
               disabled={status !== "queued" && status !== "running"}
               className="rounded-xl border border-border px-5 text-sm disabled:opacity-35"
             >
-              Cancel
+              Stop waiting
             </button>
           </div>
 
@@ -750,7 +785,7 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
           {status === "failed" && (
             <div className="empty-state text-rose-300">
               <TriangleAlert className="size-7" />
-              <p>Simulation failed. Check the circuit and try again.</p>
+              <p role="alert">{error}</p>
 
               <button
                 onClick={run}
@@ -777,7 +812,7 @@ function SimulationPanel({ circuit }: { circuit: Circuit }) {
                 <div className="text-right text-xs text-muted-foreground">
                   <p>{simName}</p>
                   <p className="mt-1">
-                    Execution time: {executionMs} ms
+                    Execution time: {executionMs === undefined ? "Not reported" : `${executionMs} ms`}
                   </p>
                 </div>
               </div>
@@ -968,11 +1003,7 @@ export default function HomePage() {
   if (page === "landing") {
     return (
       <>
-        {showIntro && (
-          <QuantumIntro onComplete={finishIntro} />
-        )}
-
-        <Landing navigate={navigate} />
+        <LandingPage />
         <Toaster position="bottom-right" richColors />
       </>
     );
@@ -988,7 +1019,7 @@ export default function HomePage() {
           tryModule={tryModule}
         />
       ) : page === "lesson" ? (
-        <Lesson
+        <Lesson key={activeLesson}
           module={
             learningModules.find(
               module => module.id === activeLesson

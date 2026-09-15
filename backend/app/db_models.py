@@ -36,6 +36,7 @@ class LearningProgress(SQLModel, table=True):
     progress: int = Field(default=0, ge=0, le=100)
     quiz_score: Optional[int] = Field(default=None)
     completed: bool = Field(default=False)
+    completed_lessons: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False, server_default="[]"))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SavedProject(SQLModel, table=True):

@@ -1,0 +1,13 @@
+{
+  "qubits": 100,
+  "superposition": 100,
+  "measurement": 100,
+  "gates": 100,
+  "entanglement": 100,
+  "circuits": 100,
+  "deutsch-jozsa": 100,
+  "grover": 100,
+  "teleportation": 100,
+  "qft": 100,
+  "vqe-qaoa": 100
+}

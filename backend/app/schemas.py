@@ -51,14 +51,16 @@ class ProfileUpdate(BaseModel):
 class ProgressUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     progress: int = Field(ge=0, le=100)
-    quiz_score: Optional[int] = None
+    quiz_score: Optional[int] = Field(default=None, ge=0, le=100)
     completed: Optional[bool] = None
+    completed_lessons: list[str] = Field(default_factory=list)
 
 class ProgressResponse(BaseModel):
     module_id: str
     progress: int
     quiz_score: Optional[int]
     completed: bool
+    completed_lessons: list[str] = Field(default_factory=list)
     updated_at: datetime
 
 class SavedProjectCreate(BaseModel):
@@ -88,13 +90,14 @@ class ModuleProgressSync(BaseModel):
     moduleId: str
     completed: bool
     percent: int = Field(ge=0, le=100)
-    quizScore: Optional[int] = None
+    quizScore: Optional[int] = Field(default=None, ge=0, le=100)
     completedLessons: List[str] = Field(default_factory=list)
     updatedAt: str
 
 class UserProgressSync(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    xp: int
-    completedModules: int
+    # Legacy clients may send XP/counts; neither is authoritative.
+    xp: int = 0
+    completedModules: int = 0
     modules: Dict[str, ModuleProgressSync]
     lastVisitedPath: Optional[str] = None
