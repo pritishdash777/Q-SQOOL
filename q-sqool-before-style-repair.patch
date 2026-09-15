@@ -1,0 +1,442 @@
+diff --git a/app/globals.css b/app/globals.css
+index 4c9f23b..ff8e70c 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -2,22 +2,25 @@
+ @import "../node_modules/tw-animate-css/dist/tw-animate.css";
+ @import "../vendor/shadcn-tailwind-4.13.0.css";
+ 
+-@utility scrollbar-thin {
+-  scrollbar-width: thin;
+-}
++@layer utilities {
++  .scrollbar-thin {
++    scrollbar-width: thin;
++  }
+ 
+-@utility scrollbar-none {
+-  scrollbar-width: none;
++  .scrollbar-none {
++    scrollbar-width: none;
++  }
+ 
+-  &::-webkit-scrollbar {
++  .scrollbar-none::-webkit-scrollbar {
+     display: none;
+   }
+-}
+ 
+-@utility scrollbar-gutter-stable {
+-  scrollbar-gutter: stable;
++  .scrollbar-gutter-stable {
++    scrollbar-gutter: stable;
++  }
+ }
+ 
++
+ :root {
+   color-scheme: light;
+ 
+@@ -101,7 +104,8 @@
+   --sidebar-ring: #43e7ff;
+ }
+ 
+-@theme inline {
++
++:root {
+   --color-background: var(--background);
+   --color-foreground: var(--foreground);
+   --color-card: var(--card);
+diff --git a/app/layout.tsx b/app/layout.tsx
+index dd8bb00..384c1c6 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -22,6 +22,9 @@ const themeScript = `
+   } catch {}
+ `;
+ 
++import StorageConsent from "@/components/privacy/StorageConsent";
++import ClientWrapper from "@/components/progress/ClientWrapper";
++
+ export default function RootLayout({
+   children,
+ }: Readonly<{
+@@ -33,7 +36,12 @@ export default function RootLayout({
+         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+       </head>
+ 
+-      <body>{children}</body>
++      <body>
++        <ClientWrapper>
++          {children}
++        </ClientWrapper>
++        <StorageConsent />
++      </body>
+     </html>
+   );
+ }
+\ No newline at end of file
+diff --git a/backend/app/db_models.py b/backend/app/db_models.py
+index a9f5a8c..af6b684 100644
+--- a/backend/app/db_models.py
++++ b/backend/app/db_models.py
+@@ -2,6 +2,7 @@ from typing import Optional
+ from datetime import datetime, timezone
+ import uuid
+ from sqlmodel import SQLModel, Field, Column, JSON
++from sqlalchemy import UniqueConstraint
+ 
+ class User(SQLModel, table=True):
+     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+@@ -23,9 +24,12 @@ class Profile(SQLModel, table=True):
+     learning_goal: Optional[str] = Field(default=None)
+     avatar_url: Optional[str] = Field(default=None)
+     xp: int = Field(default=0)
++    last_visited_path: Optional[str] = Field(default=None)
+     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+ 
+ class LearningProgress(SQLModel, table=True):
++    __table_args__ = (UniqueConstraint("user_id", "module_id", name="uq_user_module"),)
++    
+     id: Optional[int] = Field(default=None, primary_key=True)
+     user_id: str = Field(index=True, foreign_key="user.id")
+     module_id: str = Field(index=True)
+diff --git a/backend/app/routers/progress.py b/backend/app/routers/progress.py
+index cd14acf..458aa0b 100644
+--- a/backend/app/routers/progress.py
++++ b/backend/app/routers/progress.py
+@@ -3,8 +3,8 @@ from datetime import datetime, timezone
+ from fastapi import APIRouter, Depends, HTTPException, status
+ from sqlmodel import Session, select
+ from ..database import get_session
+-from ..db_models import User, LearningProgress
+-from ..schemas import ProgressResponse, ProgressUpdate
++from ..db_models import User, LearningProgress, Profile
++from ..schemas import ProgressResponse, ProgressUpdate, UserProgressSync
+ from ..dependencies import get_current_user
+ 
+ router = APIRouter(prefix="/api/progress", tags=["progress"])
+@@ -14,8 +14,50 @@ def get_progress(current_user: User = Depends(get_current_user), session: Sessio
+     progress_records = session.exec(select(LearningProgress).where(LearningProgress.user_id == current_user.id)).all()
+     return progress_records
+ 
+-@router.put("/{module_id}", response_model=ProgressResponse)
+-def update_progress(
++@router.put("")
++def sync_progress(
++    sync_data: UserProgressSync,
++    current_user: User = Depends(get_current_user),
++    session: Session = Depends(get_session)
++):
++    # Upsert Profile data (XP and last_visited_path)
++    profile = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
++    if profile:
++        profile.xp = sync_data.xp
++        if sync_data.lastVisitedPath:
++            profile.last_visited_path = sync_data.lastVisitedPath
++        profile.updated_at = datetime.now(timezone.utc)
++        session.add(profile)
++        
++    # Upsert each module
++    for mod_id, mod_data in sync_data.modules.items():
++        progress = session.exec(
++            select(LearningProgress)
++            .where(LearningProgress.user_id == current_user.id)
++            .where(LearningProgress.module_id == mod_id)
++        ).first()
++        
++        if not progress:
++            progress = LearningProgress(
++                user_id=current_user.id,
++                module_id=mod_id,
++                progress=mod_data.percent,
++                quiz_score=mod_data.quizScore,
++                completed=mod_data.completed
++            )
++        else:
++            progress.progress = mod_data.percent
++            progress.quiz_score = mod_data.quizScore
++            progress.completed = mod_data.completed
++            
++        progress.updated_at = datetime.now(timezone.utc)
++        session.add(progress)
++        
++    session.commit()
++    return {"status": "success"}
++
++@router.patch("/modules/{module_id}", response_model=ProgressResponse)
++def update_module_progress(
+     module_id: str,
+     progress_update: ProgressUpdate,
+     current_user: User = Depends(get_current_user),
+diff --git a/backend/app/schemas.py b/backend/app/schemas.py
+index 4efbad5..ea9f5e5 100644
+--- a/backend/app/schemas.py
++++ b/backend/app/schemas.py
+@@ -35,6 +35,7 @@ class ProfileResponse(BaseModel):
+     learning_goal: Optional[str] = None
+     avatar_url: Optional[str] = None
+     xp: int
++    last_visited_path: Optional[str] = None
+     updated_at: datetime
+ 
+ class ProfileUpdate(BaseModel):
+@@ -79,3 +80,21 @@ class SavedProjectResponse(BaseModel):
+     sdk: str
+     created_at: datetime
+     updated_at: datetime
++
++from typing import Dict, List
++
++class ModuleProgressSync(BaseModel):
++    model_config = ConfigDict(extra="ignore")
++    moduleId: str
++    completed: bool
++    percent: int = Field(ge=0, le=100)
++    quizScore: Optional[int] = None
++    completedLessons: List[str] = Field(default_factory=list)
++    updatedAt: str
++
++class UserProgressSync(BaseModel):
++    model_config = ConfigDict(extra="ignore")
++    xp: int
++    completedModules: int
++    modules: Dict[str, ModuleProgressSync]
++    lastVisitedPath: Optional[str] = None
+diff --git a/backend/tests/test_progress.py b/backend/tests/test_progress.py
+index 0ef08da..38df70c 100644
+--- a/backend/tests/test_progress.py
++++ b/backend/tests/test_progress.py
+@@ -1,7 +1,7 @@
+ import pytest
+ from fastapi.testclient import TestClient
+ 
+-def test_update_progress(client: TestClient):
++def test_update_module_progress(client: TestClient):
+     register_res = client.post("/api/auth/register", json={
+         "email": "progress@example.com",
+         "password": "password123",
+@@ -9,7 +9,7 @@ def test_update_progress(client: TestClient):
+     })
+     token = register_res.json()["access_token"]
+     
+-    response = client.put("/api/progress/module-1", json={
++    response = client.patch("/api/progress/modules/module-1", json={
+         "progress": 50,
+         "quiz_score": 80
+     }, headers={"Authorization": f"Bearer {token}"})
+@@ -28,7 +28,7 @@ def test_progress_completion(client: TestClient):
+     })
+     token = register_res.json()["access_token"]
+     
+-    response = client.put("/api/progress/module-1", json={
++    response = client.patch("/api/progress/modules/module-1", json={
+         "progress": 100
+     }, headers={"Authorization": f"Bearer {token}"})
+     
+@@ -37,18 +37,87 @@ def test_progress_completion(client: TestClient):
+     assert data["progress"] == 100
+     assert data["completed"] == True
+ 
+-def test_get_progress(client: TestClient):
+-    register_res = client.post("/api/auth/register", json={
++def test_get_progress_and_isolation(client: TestClient):
++    # User 1
++    register_res_1 = client.post("/api/auth/register", json={
+         "email": "progress3@example.com",
+         "password": "password123",
+         "full_name": "Progress User 3"
+     })
+-    token = register_res.json()["access_token"]
++    token_1 = register_res_1.json()["access_token"]
++    
++    client.patch("/api/progress/modules/module-1", json={"progress": 20}, headers={"Authorization": f"Bearer {token_1}"})
++    client.patch("/api/progress/modules/module-2", json={"progress": 60}, headers={"Authorization": f"Bearer {token_1}"})
+     
+-    client.put("/api/progress/module-1", json={"progress": 20}, headers={"Authorization": f"Bearer {token}"})
+-    client.put("/api/progress/module-2", json={"progress": 60}, headers={"Authorization": f"Bearer {token}"})
++    # User 2
++    register_res_2 = client.post("/api/auth/register", json={
++        "email": "progress4@example.com",
++        "password": "password123",
++        "full_name": "Progress User 4"
++    })
++    token_2 = register_res_2.json()["access_token"]
+     
+-    response = client.get("/api/progress", headers={"Authorization": f"Bearer {token}"})
++    client.patch("/api/progress/modules/module-1", json={"progress": 90}, headers={"Authorization": f"Bearer {token_2}"})
++
++    # Assert User 1 only sees their 2 modules
++    response_1 = client.get("/api/progress", headers={"Authorization": f"Bearer {token_1}"})
++    assert response_1.status_code == 200
++    data_1 = response_1.json()
++    assert len(data_1) == 2
++    assert any(m["module_id"] == "module-1" and m["progress"] == 20 for m in data_1)
++    
++    # Assert User 2 only sees their 1 module
++    response_2 = client.get("/api/progress", headers={"Authorization": f"Bearer {token_2}"})
++    assert response_2.status_code == 200
++    data_2 = response_2.json()
++    assert len(data_2) == 1
++    assert data_2[0]["module_id"] == "module-1"
++    assert data_2[0]["progress"] == 90
++
++def test_bulk_sync_progress(client: TestClient):
++    register_res = client.post("/api/auth/register", json={
++        "email": "progress5@example.com",
++        "password": "password123",
++        "full_name": "Progress User 5"
++    })
++    token = register_res.json()["access_token"]
++
++    sync_payload = {
++        "xp": 150,
++        "completedModules": 1,
++        "lastVisitedPath": "/module-2/lesson-1",
++        "modules": {
++            "module-1": {
++                "moduleId": "module-1",
++                "completed": True,
++                "percent": 100,
++                "quizScore": 95,
++                "completedLessons": ["lesson-1", "lesson-2"],
++                "updatedAt": "2026-09-14T10:00:00Z"
++            },
++            "module-2": {
++                "moduleId": "module-2",
++                "completed": False,
++                "percent": 10,
++                "quizScore": None,
++                "completedLessons": ["lesson-1"],
++                "updatedAt": "2026-09-14T10:05:00Z"
++            }
++        }
++    }
++
++    # Bulk PUT
++    response = client.put("/api/progress", json=sync_payload, headers={"Authorization": f"Bearer {token}"})
+     assert response.status_code == 200
+-    data = response.json()
++
++    # Verify via GET
++    get_res = client.get("/api/progress", headers={"Authorization": f"Bearer {token}"})
++    assert get_res.status_code == 200
++    data = get_res.json()
+     assert len(data) == 2
++
++    # Verify Profile updates
++    profile_res = client.get("/api/profile", headers={"Authorization": f"Bearer {token}"})
++    assert profile_res.status_code == 200
++    profile_data = profile_res.json()
++    assert profile_data["xp"] == 150
+diff --git a/lib/auth-api.ts b/lib/auth-api.ts
+index 9229ccf..59bcf12 100644
+--- a/lib/auth-api.ts
++++ b/lib/auth-api.ts
+@@ -1,6 +1,5 @@
+ import { AuthResponse, UserProfile, LearningProgress, CloudProject, AuthUser } from "./auth-types";
+ 
+-// Reuse API base URL logic from api.ts if possible, or just re-declare it here
+ const API_BASE =
+   process.env.NEXT_PUBLIC_API_URL ||
+   (typeof window !== "undefined" && window.location.hostname === "localhost"
+@@ -26,19 +25,29 @@ function removeStoredToken() {
+   }
+ }
+ 
+-async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
++export function hasAuthToken(): boolean {
++  return !!getStoredToken();
++}
++
++export class ApiError extends Error {
++  constructor(message: string, public status: number) {
++    super(message);
++    this.name = "ApiError";
++  }
++}
++
++async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
+   const token = getStoredToken();
+   const headers: Record<string, string> = {
+     "Content-Type": "application/json",
+     ...(options.headers as Record<string, string> || {}),
+   };
+-
+   if (token) {
+     headers["Authorization"] = `Bearer ${token}`;
+   }
+ 
+   const controller = new AbortController();
+-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
++  const timeoutId = setTimeout(() => controller.abort(), 10000);
+ 
+   try {
+     const res = await fetch(`${API_BASE}${endpoint}`, {
+@@ -46,31 +55,32 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
+       headers,
+       signal: controller.signal,
+     });
+-    
+     clearTimeout(timeoutId);
+-
+     if (res.status === 401) {
++      // Unauthorized – clear stored token
+       removeStoredToken();
+     }
+-
+     if (!res.ok) {
+       let errorMsg = `HTTP error ${res.status}`;
+       try {
+         const errJson = await res.json();
+         errorMsg = errJson.detail || errorMsg;
+       } catch (e) {
+-        // failed to parse error json
++        // ignore json parse error
+       }
+-      throw new Error(errorMsg);
++      throw new ApiError(errorMsg, res.status);
+     }
+-
+     return res;
+   } catch (err: any) {
+     clearTimeout(timeoutId);
+-    if (err.name === 'AbortError') {
+-      throw new Error("Request timed out");
++    if (err.name === "AbortError") {
++      throw new ApiError("Request timed out", 0);
++    }
++    // If already an ApiError, rethrow; otherwise wrap
++    if (err instanceof ApiError) {
++      throw err;
+     }
+-    throw err;
++    throw new ApiError(err.message ?? "Unknown error", 0);
+   }
+ }
+ 
+@@ -134,6 +144,24 @@ export async function getProjects(): Promise<CloudProject[]> {
+   return res.json();
+ }
+ 
++export async function saveProgress(progress: any): Promise<void> {
++  await fetchWithAuth("/api/progress", {
++    method: "PUT",
++    body: JSON.stringify(progress),
++  });
++}
++
++export async function updateModuleProgress(
++  moduleId: string,
++  patch: Partial<{ progress: number; completed?: boolean; quiz_score?: number }>
++): Promise<LearningProgress> {
++  const res = await fetchWithAuth(`/api/progress/modules/${moduleId}`, {
++    method: "PATCH",
++    body: JSON.stringify(patch),
++  });
++  return res.json();
++}
++
+ export async function createProject(name: string, circuit_json: any, sdk: string = "Qiskit"): Promise<CloudProject> {
+   const res = await fetchWithAuth("/api/projects", {
+     method: "POST",

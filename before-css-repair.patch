@@ -1,0 +1,919 @@
+diff --git a/app/globals.css b/app/globals.css
+index 4c9f23b..c8584c7 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -2,22 +2,25 @@
+ @import "../node_modules/tw-animate-css/dist/tw-animate.css";
+ @import "../vendor/shadcn-tailwind-4.13.0.css";
+ 
+-@utility scrollbar-thin {
+-  scrollbar-width: thin;
+-}
++@layer utilities {
++  .scrollbar-thin {
++    scrollbar-width: thin;
++  }
+ 
+-@utility scrollbar-none {
+-  scrollbar-width: none;
++  .scrollbar-none {
++    scrollbar-width: none;
++  }
+ 
+-  &::-webkit-scrollbar {
++  .scrollbar-none::-webkit-scrollbar {
+     display: none;
+   }
+-}
+ 
+-@utility scrollbar-gutter-stable {
+-  scrollbar-gutter: stable;
++  .scrollbar-gutter-stable {
++    scrollbar-gutter: stable;
++  }
+ }
+ 
++
+ :root {
+   color-scheme: light;
+ 
+@@ -30,8 +33,8 @@
+   --popover: #ffffff;
+   --popover-foreground: #172033;
+ 
+-  --primary: #5b5bd6;
+-  --primary-foreground: #ffffff;
++  --primary: #c6a7ff;
++  --primary-foreground: #14072b;
+ 
+   --secondary: #0891b2;
+   --secondary-foreground: #ffffff;
+@@ -43,7 +46,7 @@
+   --accent-foreground: #252d62;
+ 
+   --destructive: #dc3545;
+-  --border: #d7deea;
++  --border: rgba(255, 255, 255, 0.13);
+   --input: #cbd5e1;
+   --ring: #6366f1;
+ 
+@@ -61,7 +64,7 @@
+   --sidebar-primary-foreground: #172033;
+   --sidebar-accent: #253351;
+   --sidebar-accent-foreground: #ffffff;
+-  --sidebar-border: #ffffff1f;
++  --sidebar-border: rgba(255, 255, 255, 0.13);
+   --sidebar-ring: #67e8f9;
+ }
+ 
+@@ -101,7 +104,8 @@
+   --sidebar-ring: #43e7ff;
+ }
+ 
+-@theme inline {
++
++:root {
+   --color-background: var(--background);
+   --color-foreground: var(--foreground);
+   --color-card: var(--card);
+@@ -1685,4 +1689,417 @@ html {
+     scroll-behavior: auto !important;
+     transition-duration: .01ms !important;
+   }
++}
++
++/* =========================================================
++   Q-SQOOL — FINAL VISUAL REFINEMENT
++   ========================================================= */
++
++:root {
++  --qs-background: #050715;
++  --qs-surface: rgba(13, 18, 40, 0.76);
++  --qs-surface-strong: rgba(16, 22, 48, 0.92);
++  --qs-purple: #c6a7ff;
++  --qs-purple-strong: #9f72ff;
++  --qs-cyan: #43e7ff;
++  --qs-text: #f5f3ff;
++  --qs-muted: #aeb8d2;
++  --qs-border: rgba(169, 156, 240, 0.17);
++  --qs-cyan-border: rgba(67, 231, 255, 0.28);
++  --qs-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
++}
++
++html.dark {
++  color-scheme: dark;
++  background: var(--qs-background);
++}
++
++html.dark body {
++  background:
++    radial-gradient(circle at 18% 12%,
++      rgba(126, 76, 255, 0.13),
++      transparent 27rem),
++    radial-gradient(circle at 87% 18%,
++      rgba(40, 214, 255, 0.09),
++      transparent 25rem),
++    radial-gradient(circle at 55% 88%,
++      rgba(194, 72, 255, 0.06),
++      transparent 28rem),
++    var(--qs-background);
++  color: var(--qs-text);
++  min-height: 100vh;
++}
++
++/* Keep progress wrappers from changing the application layout */
++
++body>div,
++#__next {
++  min-height: 100vh;
++}
++
++[data-progress-wrapper],
++.progress-client-wrapper,
++.client-wrapper {
++  display: contents;
++}
++
++/* Ambient quantum grid */
++
++.quantum-grid {
++  position: relative;
++  isolation: isolate;
++  background-color: transparent;
++  background-image:
++    linear-gradient(rgba(136, 126, 255, 0.045) 1px, transparent 1px),
++    linear-gradient(90deg,
++      rgba(136, 126, 255, 0.045) 1px,
++      transparent 1px);
++  background-size: 34px 34px;
++}
++
++.quantum-grid::before {
++  content: "";
++  position: fixed;
++  inset: 0;
++  z-index: -2;
++  pointer-events: none;
++  background:
++    radial-gradient(circle at 12% 16%,
++      rgba(139, 92, 246, 0.13),
++      transparent 32%),
++    radial-gradient(circle at 88% 14%,
++      rgba(34, 211, 238, 0.09),
++      transparent 30%);
++}
++
++/* Premium glass surfaces */
++
++.glass {
++  position: relative;
++  border: 1px solid var(--qs-border);
++  background:
++    linear-gradient(145deg,
++      rgba(20, 27, 55, 0.86),
++      rgba(7, 11, 28, 0.74));
++  box-shadow:
++    inset 0 1px 0 rgba(255, 255, 255, 0.045),
++    var(--qs-shadow);
++  backdrop-filter: blur(20px) saturate(125%);
++  -webkit-backdrop-filter: blur(20px) saturate(125%);
++}
++
++.glass::before {
++  content: "";
++  position: absolute;
++  inset: 0;
++  z-index: -1;
++  pointer-events: none;
++  border-radius: inherit;
++  background: linear-gradient(120deg,
++      rgba(198, 167, 255, 0.045),
++      transparent 38%,
++      rgba(67, 231, 255, 0.025));
++}
++
++.glass:hover {
++  border-color: rgba(67, 231, 255, 0.24);
++}
++
++/* Headings */
++
++.glow-text {
++  background: linear-gradient(105deg,
++      #ffffff 8%,
++      #d8c2ff 42%,
++      #65ebff 86%);
++  background-clip: text;
++  -webkit-background-clip: text;
++  color: transparent;
++  filter: drop-shadow(0 0 24px rgba(147, 104, 255, 0.2));
++}
++
++/* General interactive elements */
++
++button,
++a {
++  outline: none;
++}
++
++button {
++  cursor: pointer;
++}
++
++button,
++a,
++input,
++select,
++textarea {
++  transition:
++    color 180ms ease,
++    background-color 180ms ease,
++    border-color 180ms ease,
++    box-shadow 180ms ease,
++    opacity 180ms ease,
++    transform 180ms ease;
++}
++
++button:focus-visible,
++a:focus-visible,
++input:focus-visible,
++select:focus-visible,
++textarea:focus-visible {
++  outline: 2px solid rgba(67, 231, 255, 0.72);
++  outline-offset: 3px;
++}
++
++button:disabled {
++  cursor: not-allowed;
++  opacity: 0.42;
++}
++
++/* Inputs */
++
++input,
++select,
++textarea {
++  border-color: var(--qs-border);
++  background: rgba(255, 255, 255, 0.035);
++  color: var(--qs-text);
++}
++
++input::placeholder,
++textarea::placeholder {
++  color: rgba(174, 184, 210, 0.62);
++}
++
++input:focus,
++select:focus,
++textarea:focus {
++  border-color: rgba(67, 231, 255, 0.55);
++  box-shadow: 0 0 0 3px rgba(67, 231, 255, 0.09);
++}
++
++/* Card movement */
++
++.hover-rise {
++  will-change: transform;
++  transition:
++    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
++    border-color 260ms ease,
++    box-shadow 260ms ease;
++}
++
++.hover-rise:hover {
++  transform: translateY(-4px);
++  border-color: var(--qs-cyan-border);
++  box-shadow:
++    inset 0 1px rgba(255, 255, 255, 0.045),
++    0 25px 65px rgba(20, 78, 160, 0.14);
++}
++
++/* Learning cards */
++
++.learning-card,
++.algorithm-card {
++  overflow: hidden;
++  border: 1px solid var(--qs-border);
++  background:
++    linear-gradient(145deg,
++      rgba(15, 22, 47, 0.88),
++      rgba(8, 12, 30, 0.78));
++  box-shadow:
++    inset 0 1px rgba(255, 255, 255, 0.035),
++    0 18px 45px rgba(0, 0, 0, 0.18);
++}
++
++.learning-card:hover,
++.algorithm-card:hover {
++  transform: translateY(-3px);
++  border-color: rgba(67, 231, 255, 0.27);
++  box-shadow:
++    inset 0 1px rgba(255, 255, 255, 0.045),
++    0 22px 55px rgba(28, 91, 180, 0.12);
++}
++
++/* Circuit elements */
++
++.circuit-wire,
++.circuit-slot::before {
++  background: rgba(137, 151, 187, 0.42);
++}
++
++.circuit-wire.active {
++  background: var(--qs-cyan);
++  box-shadow:
++    0 0 10px rgba(67, 231, 255, 0.85),
++    0 0 24px rgba(67, 231, 255, 0.25);
++}
++
++.circuit-gate {
++  color: var(--qs-text);
++  border-color: rgba(198, 167, 255, 0.52);
++  background:
++    linear-gradient(145deg,
++      rgba(54, 37, 93, 0.95),
++      rgba(26, 20, 58, 0.96));
++  box-shadow:
++    inset 0 1px rgba(255, 255, 255, 0.08),
++    0 7px 20px rgba(0, 0, 0, 0.3);
++}
++
++.circuit-gate:hover {
++  transform: translateY(-2px);
++  border-color: var(--qs-cyan);
++  box-shadow:
++    inset 0 1px rgba(255, 255, 255, 0.1),
++    0 0 24px rgba(67, 231, 255, 0.18);
++}
++
++/* Q-AI panel */
++
++.ai-response {
++  border: 1px solid rgba(67, 231, 255, 0.22);
++  background:
++    linear-gradient(145deg,
++      rgba(67, 231, 255, 0.055),
++      rgba(198, 167, 255, 0.035));
++  box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
++}
++
++.ai-action:hover:not(:disabled) {
++  border-color: rgba(67, 231, 255, 0.4);
++  color: var(--qs-text);
++  background: rgba(67, 231, 255, 0.07);
++}
++
++.ai-action.primary {
++  border-color: rgba(67, 231, 255, 0.4);
++  background: rgba(67, 231, 255, 0.12);
++  color: var(--qs-cyan);
++}
++
++/* Progress and sync UI */
++
++[role="progressbar"] {
++  overflow: hidden;
++  border-radius: 999px;
++  background: rgba(255, 255, 255, 0.07);
++}
++
++[role="progressbar"]>div {
++  background: linear-gradient(90deg,
++      var(--qs-purple-strong),
++      var(--qs-cyan));
++  box-shadow: 0 0 16px rgba(67, 231, 255, 0.4);
++}
++
++.sync-status,
++[data-sync-status] {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.4rem;
++  min-height: 32px;
++  border: 1px solid var(--qs-border);
++  border-radius: 999px;
++  background: rgba(10, 15, 34, 0.78);
++  padding: 0.4rem 0.7rem;
++  color: var(--qs-muted);
++  font-size: 0.72rem;
++  line-height: 1;
++  box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
++  backdrop-filter: blur(14px);
++}
++
++/* Privacy consent banner */
++
++.storage-consent,
++[data-storage-consent] {
++  position: fixed;
++  right: 1.25rem;
++  bottom: 1.25rem;
++  left: auto;
++  z-index: 100;
++  width: min(420px, calc(100vw - 2rem));
++  overflow: hidden;
++  border: 1px solid rgba(198, 167, 255, 0.24);
++  border-radius: 1rem;
++  background:
++    linear-gradient(145deg,
++      rgba(17, 23, 49, 0.97),
++      rgba(7, 11, 27, 0.97));
++  padding: 1rem;
++  color: var(--qs-text);
++  box-shadow:
++    inset 0 1px rgba(255, 255, 255, 0.05),
++    0 24px 70px rgba(0, 0, 0, 0.42);
++  backdrop-filter: blur(22px);
++  -webkit-backdrop-filter: blur(22px);
++}
++
++.storage-consent button,
++[data-storage-consent] button {
++  min-height: 38px;
++  border-radius: 0.65rem;
++}
++
++/* Scrollbar */
++
++* {
++  scrollbar-width: thin;
++  scrollbar-color: rgba(198, 167, 255, 0.34) transparent;
++}
++
++*::-webkit-scrollbar {
++  width: 7px;
++  height: 7px;
++}
++
++*::-webkit-scrollbar-track {
++  background: transparent;
++}
++
++*::-webkit-scrollbar-thumb {
++  border-radius: 999px;
++  background: rgba(198, 167, 255, 0.3);
++}
++
++*::-webkit-scrollbar-thumb:hover {
++  background: rgba(67, 231, 255, 0.4);
++}
++
++/* Mobile refinement */
++
++@media (max-width: 768px) {
++  .glass {
++    backdrop-filter: blur(15px);
++    -webkit-backdrop-filter: blur(15px);
++  }
++
++  .storage-consent,
++  [data-storage-consent] {
++    right: 0.75rem;
++    bottom: 0.75rem;
++    left: 0.75rem;
++    width: auto;
++  }
++
++  .hover-rise:hover,
++  .learning-card:hover,
++  .algorithm-card:hover {
++    transform: none;
++  }
++}
++
++/* Accessibility */
++
++@media (prefers-reduced-motion: reduce) {
++
++  *,
++  *::before,
++  *::after {
++    scroll-behavior: auto !important;
++    animation-duration: 0.01ms !important;
++    animation-iteration-count: 1 !important;
++    transition-duration: 0.01ms !important;
++  }
+ }
+\ No newline at end of file
+diff --git a/app/layout.tsx b/app/layout.tsx
+index dd8bb00..169327c 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -14,12 +14,14 @@ export const metadata: Metadata = {
+ const themeScript = `
+   try {
+     const savedTheme = localStorage.getItem("q-sqool-theme");
++    const theme = savedTheme === "light" ? "light" : "dark";
+ 
+-    document.documentElement.classList.toggle(
+-      "dark",
+-      savedTheme === "dark"
+-    );
+-  } catch {}
++    document.documentElement.classList.toggle("dark", theme === "dark");
++    document.documentElement.style.colorScheme = theme;
++  } catch {
++    document.documentElement.classList.add("dark");
++    document.documentElement.style.colorScheme = "dark";
++  }
+ `;
+ 
+ export default function RootLayout({
+@@ -28,7 +30,7 @@ export default function RootLayout({
+   children: React.ReactNode;
+ }>) {
+   return (
+-    <html lang="en" suppressHydrationWarning>
++    <html lang="en" className="dark" suppressHydrationWarning>
+       <head>
+         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+       </head>
+diff --git a/app/page.tsx b/app/page.tsx
+index b33bf42..7c7c37d 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -412,7 +412,7 @@ function ThemeToggle() {
+ 
+   useEffect(() => {
+     const savedTheme = localStorage.getItem("q-sqool-theme");
+-    const useDark = savedTheme === "dark";
++    const useDark = savedTheme === null ? true : savedTheme === "dark";
+ 
+     setDark(useDark);
+     document.documentElement.classList.toggle("dark", useDark);
+diff --git a/backend/app/db_models.py b/backend/app/db_models.py
+index a9f5a8c..af6b684 100644
+--- a/backend/app/db_models.py
++++ b/backend/app/db_models.py
+@@ -2,6 +2,7 @@ from typing import Optional
+ from datetime import datetime, timezone
+ import uuid
+ from sqlmodel import SQLModel, Field, Column, JSON
++from sqlalchemy import UniqueConstraint
+ 
+ class User(SQLModel, table=True):
+     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+@@ -23,9 +24,12 @@ class Profile(SQLModel, table=True):
+     learning_goal: Optional[str] = Field(default=None)
+     avatar_url: Optional[str] = Field(default=None)
+     xp: int = Field(default=0)
++    last_visited_path: Optional[str] = Field(default=None)
+     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+ 
+ class LearningProgress(SQLModel, table=True):
++    __table_args__ = (UniqueConstraint("user_id", "module_id", name="uq_user_module"),)
++    
+     id: Optional[int] = Field(default=None, primary_key=True)
+     user_id: str = Field(index=True, foreign_key="user.id")
+     module_id: str = Field(index=True)
+diff --git a/backend/app/routers/progress.py b/backend/app/routers/progress.py
+index cd14acf..458aa0b 100644
+--- a/backend/app/routers/progress.py
++++ b/backend/app/routers/progress.py
+@@ -3,8 +3,8 @@ from datetime import datetime, timezone
+ from fastapi import APIRouter, Depends, HTTPException, status
+ from sqlmodel import Session, select
+ from ..database import get_session
+-from ..db_models import User, LearningProgress
+-from ..schemas import ProgressResponse, ProgressUpdate
++from ..db_models import User, LearningProgress, Profile
++from ..schemas import ProgressResponse, ProgressUpdate, UserProgressSync
+ from ..dependencies import get_current_user
+ 
+ router = APIRouter(prefix="/api/progress", tags=["progress"])
+@@ -14,8 +14,50 @@ def get_progress(current_user: User = Depends(get_current_user), session: Sessio
+     progress_records = session.exec(select(LearningProgress).where(LearningProgress.user_id == current_user.id)).all()
+     return progress_records
+ 
+-@router.put("/{module_id}", response_model=ProgressResponse)
+-def update_progress(
++@router.put("")
++def sync_progress(
++    sync_data: UserProgressSync,
++    current_user: User = Depends(get_current_user),
++    session: Session = Depends(get_session)
++):
++    # Upsert Profile data (XP and last_visited_path)
++    profile = session.exec(select(Profile).where(Profile.user_id == current_user.id)).first()
++    if profile:
++        profile.xp = sync_data.xp
++        if sync_data.lastVisitedPath:
++            profile.last_visited_path = sync_data.lastVisitedPath
++        profile.updated_at = datetime.now(timezone.utc)
++        session.add(profile)
++        
++    # Upsert each module
++    for mod_id, mod_data in sync_data.modules.items():
++        progress = session.exec(
++            select(LearningProgress)
++            .where(LearningProgress.user_id == current_user.id)
++            .where(LearningProgress.module_id == mod_id)
++        ).first()
++        
++        if not progress:
++            progress = LearningProgress(
++                user_id=current_user.id,
++                module_id=mod_id,
++                progress=mod_data.percent,
++                quiz_score=mod_data.quizScore,
++                completed=mod_data.completed
++            )
++        else:
++            progress.progress = mod_data.percent
++            progress.quiz_score = mod_data.quizScore
++            progress.completed = mod_data.completed
++            
++        progress.updated_at = datetime.now(timezone.utc)
++        session.add(progress)
++        
++    session.commit()
++    return {"status": "success"}
++
++@router.patch("/modules/{module_id}", response_model=ProgressResponse)
++def update_module_progress(
+     module_id: str,
+     progress_update: ProgressUpdate,
+     current_user: User = Depends(get_current_user),
+diff --git a/backend/app/schemas.py b/backend/app/schemas.py
+index 4efbad5..ea9f5e5 100644
+--- a/backend/app/schemas.py
++++ b/backend/app/schemas.py
+@@ -35,6 +35,7 @@ class ProfileResponse(BaseModel):
+     learning_goal: Optional[str] = None
+     avatar_url: Optional[str] = None
+     xp: int
++    last_visited_path: Optional[str] = None
+     updated_at: datetime
+ 
+ class ProfileUpdate(BaseModel):
+@@ -79,3 +80,21 @@ class SavedProjectResponse(BaseModel):
+     sdk: str
+     created_at: datetime
+     updated_at: datetime
++
++from typing import Dict, List
++
++class ModuleProgressSync(BaseModel):
++    model_config = ConfigDict(extra="ignore")
++    moduleId: str
++    completed: bool
++    percent: int = Field(ge=0, le=100)
++    quizScore: Optional[int] = None
++    completedLessons: List[str] = Field(default_factory=list)
++    updatedAt: str
++
++class UserProgressSync(BaseModel):
++    model_config = ConfigDict(extra="ignore")
++    xp: int
++    completedModules: int
++    modules: Dict[str, ModuleProgressSync]
++    lastVisitedPath: Optional[str] = None
+diff --git a/backend/tests/test_progress.py b/backend/tests/test_progress.py
+index 0ef08da..38df70c 100644
+--- a/backend/tests/test_progress.py
++++ b/backend/tests/test_progress.py
+@@ -1,7 +1,7 @@
+ import pytest
+ from fastapi.testclient import TestClient
+ 
+-def test_update_progress(client: TestClient):
++def test_update_module_progress(client: TestClient):
+     register_res = client.post("/api/auth/register", json={
+         "email": "progress@example.com",
+         "password": "password123",
+@@ -9,7 +9,7 @@ def test_update_progress(client: TestClient):
+     })
+     token = register_res.json()["access_token"]
+     
+-    response = client.put("/api/progress/module-1", json={
++    response = client.patch("/api/progress/modules/module-1", json={
+         "progress": 50,
+         "quiz_score": 80
+     }, headers={"Authorization": f"Bearer {token}"})
+@@ -28,7 +28,7 @@ def test_progress_completion(client: TestClient):
+     })
+     token = register_res.json()["access_token"]
+     
+-    response = client.put("/api/progress/module-1", json={
++    response = client.patch("/api/progress/modules/module-1", json={
+         "progress": 100
+     }, headers={"Authorization": f"Bearer {token}"})
+     
+@@ -37,18 +37,87 @@ def test_progress_completion(client: TestClient):
+     assert data["progress"] == 100
+     assert data["completed"] == True
+ 
+-def test_get_progress(client: TestClient):
+-    register_res = client.post("/api/auth/register", json={
++def test_get_progress_and_isolation(client: TestClient):
++    # User 1
++    register_res_1 = client.post("/api/auth/register", json={
+         "email": "progress3@example.com",
+         "password": "password123",
+         "full_name": "Progress User 3"
+     })
+-    token = register_res.json()["access_token"]
++    token_1 = register_res_1.json()["access_token"]
++    
++    client.patch("/api/progress/modules/module-1", json={"progress": 20}, headers={"Authorization": f"Bearer {token_1}"})
++    client.patch("/api/progress/modules/module-2", json={"progress": 60}, headers={"Authorization": f"Bearer {token_1}"})
+     
+-    client.put("/api/progress/module-1", json={"progress": 20}, headers={"Authorization": f"Bearer {token}"})
+-    client.put("/api/progress/module-2", json={"progress": 60}, headers={"Authorization": f"Bearer {token}"})
++    # User 2
++    register_res_2 = client.post("/api/auth/register", json={
++        "email": "progress4@example.com",
++        "password": "password123",
++        "full_name": "Progress User 4"
++    })
++    token_2 = register_res_2.json()["access_token"]
+     
+-    response = client.get("/api/progress", headers={"Authorization": f"Bearer {token}"})
++    client.patch("/api/progress/modules/module-1", json={"progress": 90}, headers={"Authorization": f"Bearer {token_2}"})
++
++    # Assert User 1 only sees their 2 modules
++    response_1 = client.get("/api/progress", headers={"Authorization": f"Bearer {token_1}"})
++    assert response_1.status_code == 200
++    data_1 = response_1.json()
++    assert len(data_1) == 2
++    assert any(m["module_id"] == "module-1" and m["progress"] == 20 for m in data_1)
++    
++    # Assert User 2 only sees their 1 module
++    response_2 = client.get("/api/progress", headers={"Authorization": f"Bearer {token_2}"})
++    assert response_2.status_code == 200
++    data_2 = response_2.json()
++    assert len(data_2) == 1
++    assert data_2[0]["module_id"] == "module-1"
++    assert data_2[0]["progress"] == 90
++
++def test_bulk_sync_progress(client: TestClient):
++    register_res = client.post("/api/auth/register", json={
++        "email": "progress5@example.com",
++        "password": "password123",
++        "full_name": "Progress User 5"
++    })
++    token = register_res.json()["access_token"]
++
++    sync_payload = {
++        "xp": 150,
++        "completedModules": 1,
++        "lastVisitedPath": "/module-2/lesson-1",
++        "modules": {
++            "module-1": {
++                "moduleId": "module-1",
++                "completed": True,
++                "percent": 100,
++                "quizScore": 95,
++                "completedLessons": ["lesson-1", "lesson-2"],
++                "updatedAt": "2026-09-14T10:00:00Z"
++            },
++            "module-2": {
++                "moduleId": "module-2",
++                "completed": False,
++                "percent": 10,
++                "quizScore": None,
++                "completedLessons": ["lesson-1"],
++                "updatedAt": "2026-09-14T10:05:00Z"
++            }
++        }
++    }
++
++    # Bulk PUT
++    response = client.put("/api/progress", json=sync_payload, headers={"Authorization": f"Bearer {token}"})
+     assert response.status_code == 200
+-    data = response.json()
++
++    # Verify via GET
++    get_res = client.get("/api/progress", headers={"Authorization": f"Bearer {token}"})
++    assert get_res.status_code == 200
++    data = get_res.json()
+     assert len(data) == 2
++
++    # Verify Profile updates
++    profile_res = client.get("/api/profile", headers={"Authorization": f"Bearer {token}"})
++    assert profile_res.status_code == 200
++    profile_data = profile_res.json()
++    assert profile_data["xp"] == 150
+diff --git a/lib/auth-api.ts b/lib/auth-api.ts
+index 9229ccf..59bcf12 100644
+--- a/lib/auth-api.ts
++++ b/lib/auth-api.ts
+@@ -1,6 +1,5 @@
+ import { AuthResponse, UserProfile, LearningProgress, CloudProject, AuthUser } from "./auth-types";
+ 
+-// Reuse API base URL logic from api.ts if possible, or just re-declare it here
+ const API_BASE =
+   process.env.NEXT_PUBLIC_API_URL ||
+   (typeof window !== "undefined" && window.location.hostname === "localhost"
+@@ -26,19 +25,29 @@ function removeStoredToken() {
+   }
+ }
+ 
+-async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
++export function hasAuthToken(): boolean {
++  return !!getStoredToken();
++}
++
++export class ApiError extends Error {
++  constructor(message: string, public status: number) {
++    super(message);
++    this.name = "ApiError";
++  }
++}
++
++async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
+   const token = getStoredToken();
+   const headers: Record<string, string> = {
+     "Content-Type": "application/json",
+     ...(options.headers as Record<string, string> || {}),
+   };
+-
+   if (token) {
+     headers["Authorization"] = `Bearer ${token}`;
+   }
+ 
+   const controller = new AbortController();
+-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
++  const timeoutId = setTimeout(() => controller.abort(), 10000);
+ 
+   try {
+     const res = await fetch(`${API_BASE}${endpoint}`, {
+@@ -46,31 +55,32 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
+       headers,
+       signal: controller.signal,
+     });
+-    
+     clearTimeout(timeoutId);
+-
+     if (res.status === 401) {
++      // Unauthorized – clear stored token
+       removeStoredToken();
+     }
+-
+     if (!res.ok) {
+       let errorMsg = `HTTP error ${res.status}`;
+       try {
+         const errJson = await res.json();
+         errorMsg = errJson.detail || errorMsg;
+       } catch (e) {
+-        // failed to parse error json
++        // ignore json parse error
+       }
+-      throw new Error(errorMsg);
++      throw new ApiError(errorMsg, res.status);
+     }
+-
+     return res;
+   } catch (err: any) {
+     clearTimeout(timeoutId);
+-    if (err.name === 'AbortError') {
+-      throw new Error("Request timed out");
++    if (err.name === "AbortError") {
++      throw new ApiError("Request timed out", 0);
++    }
++    // If already an ApiError, rethrow; otherwise wrap
++    if (err instanceof ApiError) {
++      throw err;
+     }
+-    throw err;
++    throw new ApiError(err.message ?? "Unknown error", 0);
+   }
+ }
+ 
+@@ -134,6 +144,24 @@ export async function getProjects(): Promise<CloudProject[]> {
+   return res.json();
+ }
+ 
++export async function saveProgress(progress: any): Promise<void> {
++  await fetchWithAuth("/api/progress", {
++    method: "PUT",
++    body: JSON.stringify(progress),
++  });
++}
++
++export async function updateModuleProgress(
++  moduleId: string,
++  patch: Partial<{ progress: number; completed?: boolean; quiz_score?: number }>
++): Promise<LearningProgress> {
++  const res = await fetchWithAuth(`/api/progress/modules/${moduleId}`, {
++    method: "PATCH",
++    body: JSON.stringify(patch),
++  });
++  return res.json();
++}
++
+ export async function createProject(name: string, circuit_json: any, sdk: string = "Qiskit"): Promise<CloudProject> {
+   const res = await fetchWithAuth("/api/projects", {
+     method: "POST",
+diff --git a/next-env.d.ts b/next-env.d.ts
+index 9edff1c..c4b7818 100644
+--- a/next-env.d.ts
++++ b/next-env.d.ts
+@@ -1,6 +1,6 @@
+ /// <reference types="next" />
+ /// <reference types="next/image-types/global" />
+-import "./.next/types/routes.d.ts";
++import "./.next/dev/types/routes.d.ts";
+ 
+ // NOTE: This file should not be edited
+ // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.

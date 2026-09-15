@@ -2,6 +2,7 @@ from typing import Optional
 from datetime import datetime, timezone
 import uuid
 from sqlmodel import SQLModel, Field, Column, JSON
+from sqlalchemy import UniqueConstraint
 
 class User(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
@@ -23,9 +24,12 @@ class Profile(SQLModel, table=True):
     learning_goal: Optional[str] = Field(default=None)
     avatar_url: Optional[str] = Field(default=None)
     xp: int = Field(default=0)
+    last_visited_path: Optional[str] = Field(default=None)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LearningProgress(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("user_id", "module_id", name="uq_user_module"),)
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(index=True, foreign_key="user.id")
     module_id: str = Field(index=True)

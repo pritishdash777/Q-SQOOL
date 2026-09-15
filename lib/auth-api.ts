@@ -1,6 +1,5 @@
 import { AuthResponse, UserProfile, LearningProgress, CloudProject, AuthUser } from "./auth-types";
 
-// Reuse API base URL logic from api.ts if possible, or just re-declare it here
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== "undefined" && window.location.hostname === "localhost"
@@ -26,19 +25,29 @@ function removeStoredToken() {
   }
 }
 
-async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
+export function hasAuthToken(): boolean {
+  return !!getStoredToken();
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+async function fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const token = getStoredToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> || {}),
   };
-
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
     const res = await fetch(`${API_BASE}${endpoint}`, {
@@ -46,31 +55,32 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
       headers,
       signal: controller.signal,
     });
-    
     clearTimeout(timeoutId);
-
     if (res.status === 401) {
+      // Unauthorized – clear stored token
       removeStoredToken();
     }
-
     if (!res.ok) {
       let errorMsg = `HTTP error ${res.status}`;
       try {
         const errJson = await res.json();
         errorMsg = errJson.detail || errorMsg;
       } catch (e) {
-        // failed to parse error json
+        // ignore json parse error
       }
-      throw new Error(errorMsg);
+      throw new ApiError(errorMsg, res.status);
     }
-
     return res;
   } catch (err: any) {
     clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      throw new Error("Request timed out");
+    if (err.name === "AbortError") {
+      throw new ApiError("Request timed out", 0);
     }
-    throw err;
+    // If already an ApiError, rethrow; otherwise wrap
+    if (err instanceof ApiError) {
+      throw err;
+    }
+    throw new ApiError(err.message ?? "Unknown error", 0);
   }
 }
 
@@ -131,6 +141,24 @@ export async function updateProgress(moduleId: string, progress: number, complet
 
 export async function getProjects(): Promise<CloudProject[]> {
   const res = await fetchWithAuth("/api/projects");
+  return res.json();
+}
+
+export async function saveProgress(progress: any): Promise<void> {
+  await fetchWithAuth("/api/progress", {
+    method: "PUT",
+    body: JSON.stringify(progress),
+  });
+}
+
+export async function updateModuleProgress(
+  moduleId: string,
+  patch: Partial<{ progress: number; completed?: boolean; quiz_score?: number }>
+): Promise<LearningProgress> {
+  const res = await fetchWithAuth(`/api/progress/modules/${moduleId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
   return res.json();
 }
 

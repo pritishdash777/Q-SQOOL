@@ -35,6 +35,7 @@ class ProfileResponse(BaseModel):
     learning_goal: Optional[str] = None
     avatar_url: Optional[str] = None
     xp: int
+    last_visited_path: Optional[str] = None
     updated_at: datetime
 
 class ProfileUpdate(BaseModel):
@@ -79,3 +80,21 @@ class SavedProjectResponse(BaseModel):
     sdk: str
     created_at: datetime
     updated_at: datetime
+
+from typing import Dict, List
+
+class ModuleProgressSync(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    moduleId: str
+    completed: bool
+    percent: int = Field(ge=0, le=100)
+    quizScore: Optional[int] = None
+    completedLessons: List[str] = Field(default_factory=list)
+    updatedAt: str
+
+class UserProgressSync(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    xp: int
+    completedModules: int
+    modules: Dict[str, ModuleProgressSync]
+    lastVisitedPath: Optional[str] = None
