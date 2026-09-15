@@ -11,6 +11,8 @@ import {
   Import,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LandingExperience } from "@/components/landing/LandingExperience";
+import { ScatterCard, ScatterText } from "@/components/effects/ScatterText";
 import { QuantumBackground } from "@/components/effects/QuantumBackground";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -338,7 +340,7 @@ function QuantumIntro({ onComplete }: { onComplete: () => void }) {
 
 function Landing({ navigate }: { navigate: (page: Page) => void }) {
   return (
-    <main className="quantum-grid q-landing min-h-screen overflow-hidden">
+    <main id="top" className="quantum-grid q-landing min-h-screen overflow-hidden">
       <QuantumBackground />
       <Ambient />
       <header className="relative z-20 mx-auto flex max-w-[1480px] items-center justify-between px-5 py-5 sm:px-8">
@@ -364,20 +366,20 @@ function Landing({ navigate }: { navigate: (page: Page) => void }) {
         <div className="page-enter relative z-10">
           <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-4 py-2 text-xs font-semibold tracking-[.18em] text-primary uppercase"><Sparkles className="size-3.5" /> AI-powered quantum learning</div>
           
-<div className="mt-3 flex items-center gap-0">
+<ScatterCard className="landing-heading relative mt-3 flex items-center gap-0">
   <Image
     src="/q-sqool-mark.svg"
-    alt="Q"
+    alt=""
     width={130}
     height={120}
     priority
     className="h-[5.5rem] w-[6.5rem] shrink-0 translate-y-4 object-contain sm:h-[7rem] sm:w-[8rem] lg:h-[8rem] lg:w-[9rem]"
   />
 
-  <h1 className="glow-text -ml-2 whitespace-nowrap text-6xl font-black leading-none tracking-tight sm:-ml-3 sm:text-7xl lg:-ml-9 lg:text-8xl">
-    -SQOOL
+  <h1 aria-label="Q-SQOOL" className="glow-text -ml-2 whitespace-nowrap text-6xl font-black leading-none tracking-tight sm:-ml-3 sm:text-7xl lg:-ml-9 lg:text-8xl">
+    <ScatterText>-SQOOL</ScatterText>
   </h1>
-</div>
+</ScatterCard>
 
           <p className="mt-7 max-w-3xl text-2xl font-medium leading-tight  text-foreground sm:text-3xl">Learn Quantum. Build Circuits. Shape the Future</p>
           <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">Move from abstract theory to executable intuition through structured lessons, a visual circuit studio, multi-simulator workflows and contextual AI guidance.</p>
@@ -392,19 +394,20 @@ function Landing({ navigate }: { navigate: (page: Page) => void }) {
           </div>
         </div>
 
-        <div className="relative hidden min-h-[560px] lg:block" aria-hidden="true">
+        <div className="relative hidden min-h-[560px] lg:block">
           <div className="orb left-[13%] top-[5%] size-[430px]" /><div className="orb left-[23%] top-[15%] size-[330px] [animation-delay:-2s]" />
           <div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-2xl" />
-          <div className="glass scan-line absolute left-[8%] top-[13%] w-[82%] rotate-[-3deg] rounded-3xl p-5 shadow-2xl [animation:float_7s_ease-in-out_infinite]">
-            <div className="mb-5 flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-semibold"><FlaskConical className="size-4 text-secondary" /> Bell State Studio</span><span className="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1 text-xs text-secondary">Statevector</span></div>
-            {[0, 1, 2].map(q => <div key={q} className="mb-9 grid grid-cols-[38px_1fr] items-center gap-3"><span className="font-mono text-xs text-muted-foreground">q[{q}]</span><div className={`circuit-wire ${q < 2 ? "active" : ""}`}>{q === 0 && <span className="absolute -top-5 left-[20%] grid size-10 place-items-center rounded-lg border border-blue-400/40 bg-blue-500/20 font-mono">H</span>}{q < 2 && <span className="absolute -top-4 left-[59%] grid size-8 place-items-center rounded-lg border border-rose-400/40 bg-rose-500/20 font-mono text-xs">CX</span>}</div></div>)}
-            <div className="grid grid-cols-3 gap-3">{["|00⟩  50%", "|01⟩  0%", "|11⟩  50%"].map((v, i) => <div key={v} className="rounded-xl border border-white/8 bg-white/[.025] p-3 text-center font-mono text-xs text-muted-foreground"><div className={`mx-auto mb-2 w-full rounded-full ${i === 1 ? "h-1 bg-foreground/5" : "h-8 bg-gradient-to-t from-primary/30 to-secondary/70"}`} />{v}</div>)}</div>
-          </div>
+          <ScatterCard className="glass scan-line absolute left-[8%] top-[13%] w-[82%] rotate-[-3deg] rounded-3xl p-5 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-semibold"><FlaskConical className="size-4 text-secondary" /> <ScatterText>Bell State Studio</ScatterText></span><span className="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1 text-xs text-secondary"><ScatterText>Statevector</ScatterText></span></div>
+            {[0, 1, 2].map(q => <div key={q} className="mb-9 grid grid-cols-[38px_1fr] items-center gap-3"><span className="font-mono text-xs text-muted-foreground"><ScatterText>{`q[${q}]`}</ScatterText></span><div className={`circuit-wire ${q < 2 ? "active" : ""}`}>{q === 0 && <span className="absolute -top-5 left-[20%] grid size-10 place-items-center rounded-lg border border-blue-400/40 bg-blue-500/20 font-mono"><ScatterText>H</ScatterText></span>}{q < 2 && <span className="absolute -top-4 left-[59%] grid size-8 place-items-center rounded-lg border border-rose-400/40 bg-rose-500/20 font-mono text-xs"><ScatterText>CX</ScatterText></span>}</div></div>)}
+            <div className="grid grid-cols-3 gap-3">{["|00⟩  50%", "|01⟩  0%", "|11⟩  50%"].map((v, i) => <div key={v} className="rounded-xl border border-white/8 bg-white/[.025] p-3 text-center font-mono text-xs text-muted-foreground"><div className={`mx-auto mb-2 w-full rounded-full ${i === 1 ? "h-1 bg-foreground/5" : "h-8 bg-gradient-to-t from-primary/30 to-secondary/70"}`} /><ScatterText>{v}</ScatterText></div>)}</div>
+          </ScatterCard>
           <div className="glass absolute bottom-[4%] right-0 w-64 rounded-2xl p-4 [animation:float_6s_ease-in-out_infinite_reverse]"><div className="flex gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary/10"><Bot className="size-4 text-secondary" /></span><div><p className="text-sm font-semibold">Q-AI Insight</p><p className="mt-1 text-xs leading-5 text-muted-foreground">The H gate prepares equal amplitudes before CX entangles both qubits.</p></div></div></div>
         </div>
       </section>
 
       <section className="relative mx-auto max-w-[1480px] px-5 pb-20 sm:px-8"><div className="grid gap-4 md:grid-cols-4">{[[BookOpen, "Learn", "Structured modules with live conceptual checks."], [FlaskConical, "Build", "Compose circuits visually, gate by gate."], [BarChart3, "Visualise", "Inspect amplitudes, states and measurements."], [Bot, "Understand", "Receive contextual explanations and guidance."]].map(([Icon, title, copy]) => { const I = Icon as typeof Home; return <article key={String(title)} className="glass hover-rise rounded-2xl p-6"><I className="size-5 text-secondary" /><h2 className="mt-6 text-xl font-semibold">{String(title)}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">{String(copy)}</p></article>; })}</div></section>
+      <LandingExperience navigate={navigate} />
     </main>
   );
 }

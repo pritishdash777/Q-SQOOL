@@ -1,0 +1,110 @@
+.q-landing .landing-heading { width: fit-content; max-width: 100%; }
+.q-landing .landing-heading .scatter-letter {
+  background: linear-gradient(105deg, var(--foreground), var(--primary) 55%, var(--secondary));
+  background-clip: text;
+  color: transparent;
+}
+.q-landing .landing-experience { position: relative; z-index: 1; }
+.q-landing .landing-section { max-width: 1380px; margin: 0 auto; padding: 92px 32px; }
+.q-landing .landing-section-heading { max-width: 670px; margin-bottom: 40px; }
+.q-landing .landing-eyebrow { display: flex; align-items: center; gap: 8px; color: var(--secondary); font: 600 11px/1.6 monospace; letter-spacing: .16em; text-transform: uppercase; }
+.q-landing .landing-section-heading h2, .q-landing .landing-final h2 { margin: 18px 0 22px; font-size: clamp(32px, 4.4vw, 60px); line-height: 1.08; font-weight: 650; letter-spacing: -.045em; }
+.q-landing .landing-section-heading h2 > span, .q-landing .landing-final h2 > span { color: var(--primary); }
+.q-landing .landing-section-heading > p:last-child, .q-landing .landing-path-heading > p { color: var(--muted-foreground); font-size: 16px; line-height: 1.85; }
+.q-landing .landing-signal-strip { display: flex; justify-content: space-evenly; flex-wrap: wrap; gap: 24px; padding: 25px 24px; border-block: 1px solid var(--border); background: color-mix(in srgb, var(--primary) 4%, transparent); }
+.q-landing .landing-signal-strip > span { display: flex; align-items: center; gap: 12px; color: var(--muted-foreground); font-size: 13px; letter-spacing: .03em; }
+.q-landing .landing-signal-strip svg { width: 18px; color: var(--secondary); }
+.q-landing .landing-qubit-panel { display: grid; grid-template-columns: 1.1fr 1fr; overflow: hidden; border: 1px solid var(--border); border-radius: 28px; background: color-mix(in srgb, var(--background) 88%, transparent); }
+.q-landing .landing-qubit-visual { position: relative; padding: 30px; background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--secondary) 9%, transparent), transparent 65%); }
+.q-landing .landing-panel-label { display: flex; align-items: center; gap: 8px; font: 10px/1.5 monospace; letter-spacing: .12em; color: var(--muted-foreground); }
+.q-landing .landing-status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--secondary); box-shadow: 0 0 12px var(--secondary); }
+.q-landing .landing-bloch { display: block; width: 100%; max-width: 400px; margin: 10px auto 0; color: var(--secondary); }
+.q-landing .landing-bloch text { fill: var(--foreground); font: 14px monospace; }
+.q-landing .landing-state-vector { stroke: var(--primary); stroke-width: 3; }
+.q-landing .landing-state-point { fill: var(--secondary); filter: drop-shadow(0 0 7px var(--secondary)); }
+.q-landing .landing-formula { text-align: center; font: clamp(12px, 1.5vw, 16px)/1.8 monospace; }
+.q-landing .landing-caption { color: var(--muted-foreground); font-size: 12px; line-height: 1.7; }
+.q-landing .landing-qubit-visual > .landing-caption { text-align: center; margin-top: 5px; }
+.q-landing .landing-qubit-controls { padding: 48px; border-left: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; }
+.q-landing .landing-control-title { display: flex; justify-content: space-between; align-items: center; font-size: 21px; font-weight: 600; margin-bottom: 20px; }
+.q-landing .landing-control-title output { color: var(--secondary); font: 26px monospace; }
+.q-landing .landing-angle { width: 100%; min-height: 36px; accent-color: var(--primary); cursor: pointer; }
+.q-landing .landing-angle:focus-visible { outline: 2px solid var(--secondary); outline-offset: 3px; }
+.q-landing .landing-range-labels { display: flex; justify-content: space-between; font: 10px monospace; color: var(--muted-foreground); }
+.q-landing .landing-presets { display: flex; gap: 8px; margin: 25px 0 30px; }
+.q-landing .landing-presets button { flex: 1; }
+.q-landing .landing-presets button[aria-pressed="true"] { border-color: var(--secondary); color: var(--secondary); background: color-mix(in srgb, var(--secondary) 8%, transparent); }
+.q-landing .landing-probabilities { display: grid; gap: 20px; }
+.q-landing .landing-probabilities > div > div:first-child { display: flex; justify-content: space-between; font: 12px monospace; margin-bottom: 9px; }
+.q-landing .landing-meter { height: 6px; border-radius: 4px; overflow: hidden; background: color-mix(in srgb, var(--foreground) 8%, transparent); }
+.q-landing .landing-meter > span { display: block; height: 100%; background: var(--secondary); transition: width 120ms ease-out; }
+.q-landing .landing-probabilities > div:last-child .landing-meter > span { background: var(--primary); }
+.q-landing .landing-explanation { min-height: 65px; margin: 25px 0 14px; font-size: 13px; color: var(--muted-foreground); line-height: 1.8; }
+.q-landing .landing-qubit-controls > button { align-self: start; padding-left: 0; }
+.q-landing .landing-journey { gap: 24px; }
+.q-landing .landing-step-tabs { width: 100%; max-width: 560px; height: auto; padding: 5px; background: color-mix(in srgb, var(--foreground) 4%, transparent); border: 1px solid var(--border); }
+.q-landing .landing-step-tabs button { padding: 12px 8px; }
+.q-landing .landing-step-content { display: grid; grid-template-columns: 1fr 1.2fr .8fr; gap: 30px; align-items: center; padding: 36px; border: 1px solid var(--border); border-radius: 24px; background: color-mix(in srgb, var(--background) 90%, transparent); }
+.q-landing .landing-step-copy h3 { font-size: 25px; line-height: 1.2; letter-spacing: -.035em; margin: 16px 0; }
+.q-landing .landing-step-copy p { min-height: 126px; font-size: 13px; color: var(--muted-foreground); line-height: 1.85; margin-bottom: 20px; }
+.q-landing .landing-code-panel { align-self: stretch; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: color-mix(in srgb, var(--primary) 4%, var(--background)); }
+.q-landing .landing-code-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 15px; border-bottom: 1px solid var(--border); font: 10px monospace; color: var(--muted-foreground); }
+.q-landing .landing-code-heading > span:first-child { display: flex; gap: 5px; }
+.q-landing .landing-code-heading i { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); opacity: .5; }
+.q-landing .landing-code-panel pre { flex: 1; overflow-x: auto; padding: 22px 16px; font: 12px/2 monospace; color: var(--secondary); }
+.q-landing .landing-code-note { padding: 12px 16px; font-size: 10px; color: var(--muted-foreground); border-top: 1px solid var(--border); }
+.q-landing .landing-outcome-chart { display: flex; gap: 14px; height: 200px; margin-top: 20px; }
+.q-landing .landing-outcome-chart > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; font: 10px monospace; }
+.q-landing .landing-outcome-track { flex: 1; width: 100%; display: flex; align-items: end; background: color-mix(in srgb, var(--primary) 5%, transparent); border-radius: 5px; overflow: hidden; }
+.q-landing .landing-outcome-track > div { width: 100%; background: linear-gradient(to top, var(--primary), var(--secondary)); transform-origin: bottom; animation: landing-bar-arrive .5s ease-out both; }
+.q-landing .landing-path-heading { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+.q-landing .landing-paths { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.q-landing .landing-path { position: relative; display: flex; flex-direction: column; padding: 32px; border-top: 1px solid var(--border); background: linear-gradient(160deg, color-mix(in srgb, var(--primary) 7%, transparent), transparent 75%); transition: transform .3s, border-color .3s; }
+.q-landing .landing-path:hover { transform: translateY(-6px); border-color: var(--secondary); }
+.q-landing .landing-path-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 45px; color: var(--primary); }
+.q-landing .landing-path-top > span { font: 40px/1 monospace; opacity: .3; }
+.q-landing .landing-path h3 { font-size: 23px; letter-spacing: -.03em; margin: 13px 0; }
+.q-landing .landing-path > p:not(.landing-eyebrow) { color: var(--muted-foreground); font-size: 14px; line-height: 1.85; margin-bottom: 28px; }
+.q-landing .landing-path > button { align-self: start; padding: 0; margin-top: auto; color: var(--secondary); }
+.q-landing .landing-faq { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; }
+.q-landing .landing-faq [data-slot="accordion-trigger"] { padding-block: 23px; font-size: 16px; }
+.q-landing .landing-faq [data-slot="accordion-content"] { color: var(--muted-foreground); line-height: 1.85; }
+.q-landing .landing-final { position: relative; max-width: 1316px; margin: 40px auto 90px; padding: 90px 24px; text-align: center; border-block: 1px solid var(--border); background: radial-gradient(ellipse at 50% 100%, color-mix(in srgb, var(--primary) 15%, transparent), transparent 70%); }
+.q-landing .landing-final .landing-eyebrow { justify-content: center; }
+.q-landing .landing-final > p { color: var(--muted-foreground); margin-bottom: 30px; }
+.q-landing .landing-final > button { height: 48px; border-radius: 12px; }
+.q-landing .landing-footer { max-width: 1380px; margin: auto; padding: 0 32px 35px; display: flex; justify-content: space-between; gap: 25px; font-size: 12px; }
+.q-landing .landing-footer > span { font-weight: 650; }
+.q-landing .landing-footer > span > span { color: var(--muted-foreground); font-weight: 400; margin-left: 10px; }
+.q-landing .landing-footer > div { display: flex; gap: 24px; color: var(--muted-foreground); }
+.q-landing .landing-footer button:hover, .q-landing .landing-footer a:hover { color: var(--secondary); }
+.q-landing .landing-reveal { transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
+.q-landing .landing-reveal[data-waiting] { opacity: 0; transform: translateY(24px); }
+@keyframes landing-bar-arrive { from { transform: scaleY(.05); } to { transform: scaleY(1); } }
+@media (max-width: 1100px) {
+  .q-landing .landing-step-content { grid-template-columns: 1fr 1fr; }
+  .q-landing .landing-outcomes { grid-column: 1 / -1; }
+  .q-landing .landing-outcome-chart { height: 130px; max-width: 400px; }
+  .q-landing .landing-qubit-controls { padding: 30px; }
+}
+@media (max-width: 767px) {
+  .q-landing .landing-section { padding: 55px 20px; }
+  .q-landing .landing-qubit-panel, .q-landing .landing-step-content, .q-landing .landing-paths, .q-landing .landing-faq { grid-template-columns: 1fr; }
+  .q-landing .landing-qubit-controls { padding: 26px; border-left: 0; border-top: 1px solid var(--border); }
+  .q-landing .landing-path-heading { display: block; margin-bottom: 28px; }
+  .q-landing .landing-path-heading .landing-section-heading { margin-bottom: 0; }
+  .q-landing .landing-step-content { padding: 23px; }
+  .q-landing .landing-step-tabs button { font-size: 11px; }
+  .q-landing .landing-step-copy p { min-height: 0; }
+  .q-landing .landing-faq { gap: 0; }
+  .q-landing .landing-final { margin: 20px 20px 50px; padding-block: 60px; }
+  .q-landing .landing-footer { flex-direction: column; padding-inline: 20px; }
+  .q-landing .landing-signal-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .q-landing .landing-signal-strip > span { font-size: 11px; gap: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .q-landing .landing-reveal, .q-landing .landing-path, .q-landing .landing-meter > span { transition: none; }
+  .q-landing .landing-reveal[data-waiting] { opacity: 1; transform: none; }
+  .q-landing .landing-path:hover { transform: none; }
+  .q-landing .landing-experience *, .q-landing .landing-experience *::before, .q-landing .landing-experience *::after { animation: none !important; transition: none !important; }
+}

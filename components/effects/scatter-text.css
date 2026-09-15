@@ -1,0 +1,39 @@
+.q-landing .scatter-card {
+  /* Keep the circuit stationary; the existing rotate utility retains its resting angle. */
+  animation: none;
+}
+.q-landing .scatter-text { position: relative; display: inline-block; }
+.q-landing .scatter-letters { visibility: hidden; pointer-events: none; }
+.q-landing .scatter-letter {
+  position: absolute;
+  display: inline-block;
+  white-space: pre;
+  line-height: 1;
+  transform-origin: center;
+}
+.q-landing .scatter-card[data-scattering] .scatter-original { visibility: hidden; }
+.q-landing .scatter-card[data-scattering] .scatter-letters { visibility: visible; }
+.q-landing .scatter-dust {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  contain: strict;
+}
+.q-landing .scatter-dust > span {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #06b6d4;
+  box-shadow: 0 0 4px #8b5cf6;
+  opacity: 0;
+}
+.q-landing .scatter-dust > span:nth-child(even) { background: #8b5cf6; }
+@media (prefers-reduced-motion: reduce) {
+  .q-landing .scatter-card { transform: none !important; }
+  .q-landing .scatter-card[data-scattering] .scatter-original { visibility: visible; }
+  .q-landing .scatter-card .scatter-letters,
+  .q-landing .scatter-card .scatter-dust { visibility: hidden; }
+}
