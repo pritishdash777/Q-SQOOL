@@ -10,7 +10,8 @@ import {
   Undo2, Upload, Users, Wand2, X, Zap, ZoomIn,
   Import,
 } from "lucide-react";
-import { Moon, Sun } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { QuantumBackground } from "@/components/effects/QuantumBackground";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Progress } from "@/components/ui/progress";
@@ -337,7 +338,8 @@ function QuantumIntro({ onComplete }: { onComplete: () => void }) {
 
 function Landing({ navigate }: { navigate: (page: Page) => void }) {
   return (
-    <main className="quantum-grid min-h-screen overflow-hidden">
+    <main className="quantum-grid q-landing min-h-screen overflow-hidden">
+      <QuantumBackground />
       <Ambient />
       <header className="relative z-20 mx-auto flex max-w-[1480px] items-center justify-between px-5 py-5 sm:px-8">
         <Brand goHome={() => navigate("landing")} />
@@ -404,45 +406,6 @@ function Landing({ navigate }: { navigate: (page: Page) => void }) {
 
       <section className="relative mx-auto max-w-[1480px] px-5 pb-20 sm:px-8"><div className="grid gap-4 md:grid-cols-4">{[[BookOpen, "Learn", "Structured modules with live conceptual checks."], [FlaskConical, "Build", "Compose circuits visually, gate by gate."], [BarChart3, "Visualise", "Inspect amplitudes, states and measurements."], [Bot, "Understand", "Receive contextual explanations and guidance."]].map(([Icon, title, copy]) => { const I = Icon as typeof Home; return <article key={String(title)} className="glass hover-rise rounded-2xl p-6"><I className="size-5 text-secondary" /><h2 className="mt-6 text-xl font-semibold">{String(title)}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">{String(copy)}</p></article>; })}</div></section>
     </main>
-  );
-}
-
-function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("q-sqool-theme");
-    const useDark = savedTheme === null ? true : savedTheme === "dark";
-
-    setDark(useDark);
-    document.documentElement.classList.toggle("dark", useDark);
-  }, []);
-
-  const toggleTheme = () => {
-    const nextDark = !dark;
-
-    setDark(nextDark);
-    document.documentElement.classList.toggle("dark", nextDark);
-    localStorage.setItem(
-      "q-sqool-theme",
-      nextDark ? "dark" : "light"
-    );
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className="grid size-10 shrink-0 place-items-center rounded-xl border border-border bg-card text-foreground shadow-sm transition hover:bg-accent"
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      title={dark ? "Light mode" : "Dark mode"}
-    >
-      {dark ? (
-        <Sun className="size-5" />
-      ) : (
-        <Moon className="size-5" />
-      )}
-    </button>
   );
 }
 
