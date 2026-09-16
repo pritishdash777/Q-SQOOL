@@ -1,0 +1,44 @@
+.intro {
+  --qi-bg: #060b1c; --qi-cyan: #65e8ef; --qi-violet: #bfa2ff; --qi-ink: #dbe9fa;
+  position: fixed; inset: 0; z-index: 9999; overflow: hidden;
+  background: var(--qi-bg); color: var(--qi-ink); touch-action: none;
+}
+.intro:global([hidden]) { display: none; }
+:global(html[data-theme="light"]) .intro { --qi-bg: #f4f6fb; --qi-cyan: #007f89; --qi-violet: #7639c9; --qi-ink: #292344; }
+.intro[data-playing] { animation: qi-reveal 4s linear both; }
+.art { position: absolute; inset: 0; pointer-events: none; }
+.chip { position: absolute; width: min(82vw, 60vh, 420px); height: min(82vw, 60vh, 420px); left: 50%; top: 50%; translate: -50% -50%; overflow: visible; }
+.particles { position: absolute; width: 100%; height: 100%; inset: 0; }
+.halo { position: absolute; width: min(90vw, 650px); aspect-ratio: 1; left: 50%; top: 50%; translate: -50% -50%; background: radial-gradient(circle, color-mix(in srgb, var(--qi-violet) 12%, transparent), transparent 65%); }
+.shell { fill: var(--qi-bg); fill-opacity: .8; stroke: var(--qi-violet); stroke-width: 1.2; }
+.rim { stroke: var(--qi-cyan); stroke-opacity: .25; stroke-width: .6; }
+.traces { stroke: var(--qi-cyan); stroke-width: 1; }
+.traces path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.traces circle { fill: var(--qi-cyan); stroke: none; }
+.gate rect { fill: color-mix(in srgb, var(--qi-violet) 12%, var(--qi-bg)); stroke: var(--qi-violet); }
+.gate path { stroke: var(--qi-cyan); stroke-width: 3; stroke-linecap: square; }
+.intro[data-playing] .chip { animation: qi-chip 2.2s cubic-bezier(.2,.7,.2,1) both; }
+.intro[data-playing] .traces path { animation: qi-trace .95s .15s ease-out forwards; }
+.intro[data-playing] .traces .pulse { stroke: var(--qi-violet); stroke-width: 3; stroke-dasharray: .1 .9; animation: qi-pulse .8s ease-in-out both; }
+.intro[data-playing] .gate { transform-origin: center; animation: qi-gate 1.55s cubic-bezier(.16,1,.3,1) both; }
+.flash, .wave { position: absolute; left: 50%; top: 50%; translate: -50% -50%; border-radius: 50%; opacity: 0; }
+.flash { width: min(85vw, 580px); aspect-ratio: 1; background: radial-gradient(circle, color-mix(in srgb, var(--qi-cyan) 45%, transparent), color-mix(in srgb, var(--qi-violet) 12%, transparent) 30%, transparent 65%); }
+.wave { width: 90px; height: 90px; border: 1px solid var(--qi-cyan); }
+.intro[data-playing] .flash { animation: qi-flash .65s 3.12s ease-out both; }
+.intro[data-playing] .wave { animation: qi-wave .7s 3.12s cubic-bezier(.12,.65,.25,1) both; }
+.caption { position: absolute; top: calc(50% + min(30vh, 210px)); width: 100%; text-align: center; }
+.caption span { display: block; font-size: 13px; font-weight: 600; letter-spacing: .34em; }
+.caption small { display: block; margin-top: 12px; font-size: 8px; letter-spacing: .25em; opacity: .55; }
+.intro[data-playing] .caption { animation: qi-caption 3.4s ease both; }
+.skip { position: absolute; right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); display: flex; gap: 24px; align-items: center; min-height: 44px; padding: 10px 18px; border: 1px solid color-mix(in srgb, var(--qi-ink) 30%, transparent); border-radius: 999px; background: var(--qi-bg); color: var(--qi-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.skip:hover { border-color: var(--qi-cyan); }
+.skip:focus-visible { outline: 2px solid var(--qi-cyan); outline-offset: 5px; }
+@keyframes qi-reveal { 0%, 82% { opacity: 1; } 100% { opacity: 0; visibility: hidden; pointer-events: none; } }
+@keyframes qi-chip { 0% { opacity: 0; transform: scale(.88); filter: blur(6px); } 28%, 88% { opacity: 1; transform: scale(1); filter: blur(0); } 100% { opacity: 0; transform: scale(1.07); filter: blur(2px); } }
+@keyframes qi-trace { to { stroke-dashoffset: 0; } }
+@keyframes qi-pulse { 0% { opacity: 0; stroke-dashoffset: 1; } 20%, 75% { opacity: 1; } 100% { opacity: 0; stroke-dashoffset: 0; } }
+@keyframes qi-gate { 0%, 45% { opacity: 0; transform: scale(.8); filter: blur(4px); } 100% { opacity: 1; transform: scale(1); filter: blur(0); } }
+@keyframes qi-flash { 0% { opacity: 0; transform: scale(.25); } 18% { opacity: .8; } 100% { opacity: 0; transform: scale(1.2); } }
+@keyframes qi-wave { 0% { opacity: 0; transform: scale(.1); } 12% { opacity: .45; } 100% { opacity: 0; transform: scale(6); } }
+@keyframes qi-caption { 0%, 12%, 100% { opacity: 0; } 30%, 78% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .intro { display: none; } }
