@@ -47,3 +47,16 @@ class SavedProject(SQLModel, table=True):
     sdk: str = Field(default="Qiskit")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProjectCollaborator(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_collaborator"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    project_id: str = Field(index=True, foreign_key="savedproject.id")
+    user_id: str = Field(index=True, foreign_key="user.id")
+    permission: str = Field(default="edit")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )

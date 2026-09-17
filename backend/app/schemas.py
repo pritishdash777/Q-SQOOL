@@ -101,3 +101,18 @@ class UserProgressSync(BaseModel):
     completedModules: int = 0
     modules: Dict[str, ModuleProgressSync]
     lastVisitedPath: Optional[str] = None
+
+
+class CollaboratorAddRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+    permission: str = Field(default="edit", pattern="^(view|edit)$")
+
+
+class CollaboratorResponse(BaseModel):
+    id: int
+    user_id: str
+    email: str
+    permission: str
+    created_at: datetime

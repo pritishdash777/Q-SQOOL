@@ -143,3 +143,38 @@ export async function updateProject(id: string, updates: Partial<CloudProject>):
 export async function deleteProject(id: string): Promise<void> {
   await fetchWithAuth(`/api/projects/${id}`, { method: "DELETE" });
 }
+
+export type Collaborator = {
+  id: number;
+  user_id: string;
+  email: string;
+  permission: "view" | "edit";
+  created_at: string;
+};
+
+export async function addCollaborator(
+  projectId: string,
+  email: string,
+  permission: "view" | "edit" = "edit"
+): Promise<Collaborator> {
+  return fetchWithAuth(`/api/projects/${projectId}/collaborators`, {
+    method: "POST",
+    body: JSON.stringify({ email, permission }),
+  });
+}
+
+export async function getCollaborators(
+  projectId: string
+): Promise<Collaborator[]> {
+  return fetchWithAuth(`/api/projects/${projectId}/collaborators`);
+}
+
+export async function removeCollaborator(
+  projectId: string,
+  collaboratorId: number
+): Promise<void> {
+  await fetchWithAuth(
+    `/api/projects/${projectId}/collaborators/${collaboratorId}`,
+    { method: "DELETE" }
+  );
+}
