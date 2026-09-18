@@ -141,10 +141,10 @@ export function QuantumBackground() {
       context.beginPath();
       context.moveTo(left, top);
       context.lineTo(left + span, top);
-      context.moveTo(left + span * 0.34, top);
-      context.lineTo(left + span * 0.34, top + 58);
-      context.moveTo(left + span * 0.68, top);
-      context.lineTo(left + span * 0.68, top + 58);
+      for (const point of [0.34, 0.68]) {
+        context.moveTo(left + span * point, top);
+        context.lineTo(left + span * point, top + 58);
+      }
       context.stroke();
       for (const point of [0.34, 0.68]) {
         context.beginPath();
@@ -183,18 +183,14 @@ export function QuantumBackground() {
       if (reducedMotion || width < 700) return;
       context.lineWidth = 1.2;
       for (const shooter of shooters) {
-        const gradient = context.createLinearGradient(
-          shooter.x,
-          shooter.y,
-          shooter.x - shooter.vx * 16,
-          shooter.y - shooter.vy * 16,
-        );
+        const tailX = shooter.x - shooter.vx * 16, tailY = shooter.y - shooter.vy * 16;
+        const gradient = context.createLinearGradient(shooter.x, shooter.y, tailX, tailY);
         gradient.addColorStop(0, "rgba(99, 235, 255, .8)");
         gradient.addColorStop(1, "rgba(157, 111, 255, 0)");
         context.strokeStyle = gradient;
         context.beginPath();
         context.moveTo(shooter.x, shooter.y);
-        context.lineTo(shooter.x - shooter.vx * 16, shooter.y - shooter.vy * 16);
+        context.lineTo(tailX, tailY);
         context.stroke();
       }
     };
@@ -248,8 +244,7 @@ export function QuantumBackground() {
         const y = particle.y + Math.max(-34, Math.min(34, scrollOffset * particle.depth));
         const radius = particle.radius * (0.8 + particle.depth * 0.45);
         context.shadowBlur = particle.depth > 0.72 ? 10 : 4;
-        context.shadowColor = `rgba(${palette[particle.color]}, ${alpha})`;
-        context.fillStyle = `rgba(${palette[particle.color]}, ${alpha})`;
+        context.shadowColor = context.fillStyle = `rgba(${palette[particle.color]}, ${alpha})`;
         context.beginPath();
         context.arc(x, y, radius, 0, TAU);
         context.fill();
@@ -295,11 +290,12 @@ export function QuantumBackground() {
 
     resize();
     handleScroll();
-    window.addEventListener("resize", scheduleResize, { passive: true });
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("pointermove", handlePointer, { passive: true });
-    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
-    window.addEventListener("pointerleave", clearPointer, { passive: true });
+    const listen = <K extends keyof WindowEventMap>(type: K, handler: (event: WindowEventMap[K]) => void) => {
+      window.addEventListener(type, handler, { passive: true });
+      return () => window.removeEventListener(type, handler);
+    };
+    const unlisten = [listen("resize", scheduleResize), listen("scroll", handleScroll),
+      listen("pointermove", handlePointer), listen("pointerdown", handlePointerDown), listen("pointerleave", clearPointer)];
     document.addEventListener("visibilitychange", handleVisibility);
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     media.addEventListener("change", handleReducedMotion);
@@ -310,11 +306,7 @@ export function QuantumBackground() {
       if (animationFrame) cancelAnimationFrame(animationFrame);
       if (resizeFrame) cancelAnimationFrame(resizeFrame);
       window.clearTimeout(shootTimer);
-      window.removeEventListener("resize", scheduleResize);
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("pointermove", handlePointer);
-      window.removeEventListener("pointerdown", handlePointerDown);
-      window.removeEventListener("pointerleave", clearPointer);
+      unlisten.forEach(remove => remove());
       document.removeEventListener("visibilitychange", handleVisibility);
       media.removeEventListener("change", handleReducedMotion);
     };

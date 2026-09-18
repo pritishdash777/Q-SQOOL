@@ -19,8 +19,7 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 if not JWT_SECRET_KEY:
     if APP_ENV == "production":
         raise ValueError("JWT_SECRET_KEY environment variable is required in production")
-    else:
-        JWT_SECRET_KEY = "fallback-secret-for-development-only"
+    JWT_SECRET_KEY = "fallback-secret-for-development-only"
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
@@ -28,12 +27,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 def create_access_token(subject: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"exp": expire, "sub": str(subject), "iat": datetime.now(timezone.utc)}
-    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_access_token(token: str) -> Optional[dict]:
     try:
-        decoded_token = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
-        return decoded_token
+        return jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.PyJWTError:
         return None

@@ -41,19 +41,20 @@ function recogniseCircuit(circuit: Circuit): DemoResult {
 }
 
 function analyseCircuit(circuit: Circuit, mode: AIMode, level: AILevel): AIAnalysis {
+  const result = (details: Omit<AIAnalysis, "before" | "after" | "gateIds"> & Partial<AIAnalysis>): AIAnalysis => ({ before: circuit, after: circuit, gateIds: [], ...details });
   const ordered = [...circuit.gates].sort((a, b) => a.qubit - b.qubit || a.column - b.column), technical = level === "Technical";
   if (mode === "Optimise") {
-    for (let i = 0; i < ordered.length - 1; i++) { const a = ordered[i], b = ordered[i + 1]; if (a.qubit === b.qubit && a.type === b.type && ["X", "H", "Z"].includes(a.type)) { const after = { ...circuit, gates: circuit.gates.filter(g => g.id !== a.id && g.id !== b.id) }; return { title: `Cancel consecutive ${a.type}-${b.type}`, text: technical ? `${a.type} is self-inverse, so ${a.type}² = I. Removing this adjacent pair preserves the ideal unitary.` : `Two ${a.type} gates in a row undo each other, so the circuit can produce the same ideal behaviour with both removed.`, gateIds: [a.id, b.id], before: circuit, after }; } }
+    for (let i = 0; i < ordered.length - 1; i++) { const a = ordered[i], b = ordered[i + 1]; if (a.qubit === b.qubit && a.type === b.type && ["X", "H", "Z"].includes(a.type)) { const after = { ...circuit, gates: circuit.gates.filter(g => g.id !== a.id && g.id !== b.id) }; return result({ title: `Cancel consecutive ${a.type}-${b.type}`, text: technical ? `${a.type} is self-inverse, so ${a.type}² = I. Removing this adjacent pair preserves the ideal unitary.` : `Two ${a.type} gates in a row undo each other, so the circuit can produce the same ideal behaviour with both removed.`, gateIds: [a.id, b.id], after }); } }
     const depth = circuit.gates.length ? Math.max(...circuit.gates.map(g => g.column)) + 1 : 0;
-    return { title: depth > 9 ? "Excessive circuit depth" : "No safe cancellation found", text: technical ? `The deterministic rule scan found no adjacent self-inverse X, H or Z pair. Current depth is ${depth}.` : `I could not find a simple X-X, H-H or Z-Z pair that is safe to remove.`, gateIds: [], before: circuit, after: circuit, warning: depth > 9 ? "High depth can increase accumulated hardware noise; backend fidelity verification is required." : undefined };
+    return result({ title: depth > 9 ? "Excessive circuit depth" : "No safe cancellation found", text: technical ? `The deterministic rule scan found no adjacent self-inverse X, H or Z pair. Current depth is ${depth}.` : `I could not find a simple X-X, H-H or Z-Z pair that is safe to remove.`, warning: depth > 9 ? "High depth can increase accumulated hardware noise; backend fidelity verification is required." : undefined });
   }
   if (mode === "Detect Errors") {
-    const seen = new Map<number, CircuitGate>(); for (const gate of ordered.filter(g => g.type === "M")) { const earlier = seen.get(gate.qubit); if (earlier) return { title: "Redundant measurement", text: technical ? "A repeated terminal measurement adds no new state evolution and can complicate exported code." : "This qubit is measured more than once without another useful operation between measurements.", gateIds: [earlier.id, gate.id], before: circuit, after: { ...circuit, gates: circuit.gates.filter(g => g.id !== gate.id) } }; seen.set(gate.qubit, gate); }
-    if (!circuit.gates.some(g => g.type === "M")) { const column = Math.max(0, ...circuit.gates.map(g => g.column)) + 1, added = Array.from({ length: circuit.qubits }, (_, qubit) => ({ id: Date.now() + qubit, type: "M" as GateName, qubit, column })); return { title: "Missing measurement", text: technical ? "The circuit has no measurement operations, so a shot-based execution would not populate classical counts." : "The circuit changes qubits but never reads them, so a shot result cannot be collected.", gateIds: [], before: circuit, after: { ...circuit, gates: [...circuit.gates, ...added] }, warning: "Adding measurements changes a statevector-only circuit into a measured circuit." }; }
-    return { title: "No common measurement error", text: "The deterministic demo found valid measurement placement in this circuit.", gateIds: [], before: circuit, after: circuit };
+    const seen = new Map<number, CircuitGate>(); for (const gate of ordered.filter(g => g.type === "M")) { const earlier = seen.get(gate.qubit); if (earlier) return result({ title: "Redundant measurement", text: technical ? "A repeated terminal measurement adds no new state evolution and can complicate exported code." : "This qubit is measured more than once without another useful operation between measurements.", gateIds: [earlier.id, gate.id], after: { ...circuit, gates: circuit.gates.filter(g => g.id !== gate.id) } }); seen.set(gate.qubit, gate); }
+    if (!circuit.gates.some(g => g.type === "M")) { const column = Math.max(0, ...circuit.gates.map(g => g.column)) + 1, added = Array.from({ length: circuit.qubits }, (_, qubit) => ({ id: Date.now() + qubit, type: "M" as GateName, qubit, column })); return result({ title: "Missing measurement", text: technical ? "The circuit has no measurement operations, so a shot-based execution would not populate classical counts." : "The circuit changes qubits but never reads them, so a shot result cannot be collected.", gateIds: [], after: { ...circuit, gates: [...circuit.gates, ...added] }, warning: "Adding measurements changes a statevector-only circuit into a measured circuit." }); }
+    return result({ title: "No common measurement error", text: "The deterministic demo found valid measurement placement in this circuit." });
   }
   const bell = circuit.gates.find(g => g.type === "H" && g.qubit === 0), cx = circuit.gates.find(g => g.type === "CX" && g.qubit === 0 && g.target === 1);
-  return bell && cx ? { title: "Bell-state explanation", text: technical ? "H prepares (|0⟩+|1⟩)/√2 on q[0]. CX then correlates q[1], producing (|00⟩+|11⟩)/√2 in the ideal model." : "The H gate makes two possible paths. CX links the second qubit to the first, so the pair is found together as 00 or 11.", gateIds: [bell.id, cx.id], before: circuit, after: circuit } : { title: "Circuit explanation", text: technical ? `This circuit contains ${circuit.gates.length} operations across ${circuit.qubits} qubits. The demo traces them in timeline order.` : `This circuit applies ${circuit.gates.length} gate${circuit.gates.length === 1 ? "" : "s"} to ${circuit.qubits} qubit${circuit.qubits === 1 ? "" : "s"}.`, gateIds: circuit.gates.slice(0, 3).map(g => g.id), before: circuit, after: circuit };
+  return bell && cx ? result({ title: "Bell-state explanation", text: technical ? "H prepares (|0⟩+|1⟩)/√2 on q[0]. CX then correlates q[1], producing (|00⟩+|11⟩)/√2 in the ideal model." : "The H gate makes two possible paths. CX links the second qubit to the first, so the pair is found together as 00 or 11.", gateIds: [bell.id, cx.id] }) : result({ title: "Circuit explanation", text: technical ? `This circuit contains ${circuit.gates.length} operations across ${circuit.qubits} qubits. The demo traces them in timeline order.` : `This circuit applies ${circuit.gates.length} gate${circuit.gates.length === 1 ? "" : "s"} to ${circuit.qubits} qubit${circuit.qubits === 1 ? "" : "s"}.`, gateIds: circuit.gates.slice(0, 3).map(g => g.id) });
 }
 
 const navigation: { id: Page; label: string; icon: typeof Home }[] = [
@@ -95,7 +96,7 @@ function generateCode(circuit: Circuit, sdk: SDK) {
   const gates = [...circuit.gates].sort((a, b) => a.column - b.column || a.qubit - b.qubit);
   if (sdk === "Qiskit") return [`from qiskit import QuantumCircuit`, ``, `qc = QuantumCircuit(${circuit.qubits}, ${circuit.qubits})`, ...gates.map(g => g.type === "M" ? `qc.measure(${g.qubit}, ${g.qubit})` : g.target !== undefined ? `qc.${g.type.toLowerCase()}(${g.qubit}, ${g.target})` : g.angle !== undefined ? `qc.${g.type.toLowerCase()}(${g.angle.toFixed(3)}, ${g.qubit})` : `qc.${g.type.toLowerCase()}(${g.qubit})`)].join("\n");
   if (sdk === "Cirq") {
-    const operations = gates.map(g => g.type === "M" ? `cirq.measure(q[${g.qubit}])` : g.type === "CX" ? `cirq.CNOT(q[${g.qubit}], q[${g.target}])` : g.type === "CZ" ? `cirq.CZ(q[${g.qubit}], q[${g.target}])` : g.angle !== undefined ? `cirq.r${g.type[1].toLowerCase()}(${g.angle.toFixed(3)})(q[${g.qubit}])` : `cirq.${g.type}(q[${g.qubit}])`);
+    const operations = gates.map(g => g.type === "M" ? `cirq.measure(q[${g.qubit}])` : ["CX", "CZ"].includes(g.type) ? `cirq.${g.type === "CX" ? "CNOT" : "CZ"}(q[${g.qubit}], q[${g.target}])` : g.angle !== undefined ? `cirq.r${g.type[1].toLowerCase()}(${g.angle.toFixed(3)})(q[${g.qubit}])` : `cirq.${g.type}(q[${g.qubit}])`);
     return [`import cirq`, ``, `q = cirq.LineQubit.range(${circuit.qubits})`, `circuit = cirq.Circuit(`, ...operations.map(line => `  ${line},`), `)`].join("\n");
   }
   return [`OPENQASM 3;`, `include "stdgates.inc";`, `qubit[${circuit.qubits}] q;`, `bit[${circuit.qubits}] c;`, ``, ...gates.map(g => g.type === "M" ? `c[${g.qubit}] = measure q[${g.qubit}];` : g.target !== undefined ? `${g.type.toLowerCase()} q[${g.qubit}], q[${g.target}];` : g.angle !== undefined ? `${g.type.toLowerCase()}(${g.angle.toFixed(3)}) q[${g.qubit}];` : `${g.type.toLowerCase()} q[${g.qubit}];`)].join("\n");
@@ -104,30 +105,22 @@ function generateCode(circuit: Circuit, sdk: SDK) {
 function parseCode(code: string, sdk: SDK): { circuit?: Circuit; warning?: string } {
   let qubits = 0; const gates: CircuitGate[] = []; const unsupported: string[] = []; let column = 0;
   const add = (type: string, qubit: string, target?: string, angle?: string) => { const name = type.toUpperCase().replace("CNOT", "CX") as GateName; if (!gatePalette.some(g => g.name === name)) { unsupported.push(type); return; } gates.push({ id: Date.now() + column, type: name, qubit: Number(qubit), column: column++, ...(target !== undefined ? { target: Number(target) } : {}), ...(angle !== undefined ? { angle: Number(angle) } : {}) }); };
+  // Declaration, rotation, controlled gate, single gate, measurement (in precedence order).
+  const patterns = {
+    Qiskit: [/QuantumCircuit\((\d+)/, /qc\.(rx|ry|rz)\(([-+\d.eE]+),\s*(\d+)\)/i, /qc\.(cx|cz)\((\d+),\s*(\d+)\)/i, /qc\.(x|y|z|h|s|t)\((\d+)\)/i, /qc\.measure\((\d+),\s*\d+\)/i],
+    Cirq: [/LineQubit\.range\((\d+)\)/, /cirq\.r([xyz])\(([-+\d.eE]+)\)\(q\[(\d+)\]\)/i, /cirq\.(CNOT|CZ)\(q\[(\d+)\],\s*q\[(\d+)\]\)/i, /cirq\.(X|Y|Z|H|S|T)\(q\[(\d+)\]\)/i, /cirq\.measure\(q\[(\d+)\]\)/i],
+    OpenQASM: [/qubit\[(\d+)\]/, /^(rx|ry|rz)\(([-+\d.eE]+)\)\s+q\[(\d+)\];$/i, /^(cx|cz)\s+q\[(\d+)\],\s*q\[(\d+)\];$/i, /^(x|y|z|h|s|t)\s+q\[(\d+)\];$/i, /^c\[\d+\]\s*=\s*measure\s+q\[(\d+)\];$/i],
+  }[sdk];
+  const ignored = { Qiskit: /^(from |import )/, Cirq: /^(import |circuit =)|^\)$/, OpenQASM: /^(OPENQASM|include|bit\[)/ }[sdk];
   code.split("\n").forEach(raw => {
-    const line = raw.trim().replace(/,$/, ""); if (!line || line.startsWith("#") || line.startsWith("//")) return; let m;
-    if (sdk === "Qiskit") {
-      if ((m = line.match(/QuantumCircuit\((\d+)/))) qubits = Number(m[1]);
-      else if ((m = line.match(/qc\.(rx|ry|rz)\(([-+\d.eE]+),\s*(\d+)\)/i))) add(m[1], m[3], undefined, m[2]);
-      else if ((m = line.match(/qc\.(cx|cz)\((\d+),\s*(\d+)\)/i))) add(m[1], m[2], m[3]);
-      else if ((m = line.match(/qc\.(x|y|z|h|s|t)\((\d+)\)/i))) add(m[1], m[2]);
-      else if ((m = line.match(/qc\.measure\((\d+),\s*\d+\)/i))) add("M", m[1]);
-      else if (!line.startsWith("from ") && !line.startsWith("import ")) unsupported.push(line);
-    } else if (sdk === "Cirq") {
-      if ((m = line.match(/LineQubit\.range\((\d+)\)/))) qubits = Number(m[1]);
-      else if ((m = line.match(/cirq\.r([xyz])\(([-+\d.eE]+)\)\(q\[(\d+)\]\)/i))) add(`R${m[1]}`, m[3], undefined, m[2]);
-      else if ((m = line.match(/cirq\.(CNOT|CZ)\(q\[(\d+)\],\s*q\[(\d+)\]\)/i))) add(m[1], m[2], m[3]);
-      else if ((m = line.match(/cirq\.(X|Y|Z|H|S|T)\(q\[(\d+)\]\)/i))) add(m[1], m[2]);
-      else if ((m = line.match(/cirq\.measure\(q\[(\d+)\]\)/i))) add("M", m[1]);
-      else if (!line.startsWith("import ") && !line.startsWith("circuit =") && line !== ")") unsupported.push(line);
-    } else {
-      if ((m = line.match(/qubit\[(\d+)\]/))) qubits = Number(m[1]);
-      else if ((m = line.match(/^(rx|ry|rz)\(([-+\d.eE]+)\)\s+q\[(\d+)\];$/i))) add(m[1], m[3], undefined, m[2]);
-      else if ((m = line.match(/^(cx|cz)\s+q\[(\d+)\],\s*q\[(\d+)\];$/i))) add(m[1], m[2], m[3]);
-      else if ((m = line.match(/^(x|y|z|h|s|t)\s+q\[(\d+)\];$/i))) add(m[1], m[2]);
-      else if ((m = line.match(/^c\[\d+\]\s*=\s*measure\s+q\[(\d+)\];$/i))) add("M", m[1]);
-      else if (!line.startsWith("OPENQASM") && !line.startsWith("include") && !line.startsWith("bit[")) unsupported.push(line);
-    }
+    const line = raw.trim().replace(/,$/, ""); if (!line || line.startsWith("#") || line.startsWith("//")) return;
+    const matches = patterns.map(pattern => line.match(pattern));
+    const kind = matches.findIndex(Boolean), m = matches[kind];
+    if (!m) { if (!ignored.test(line)) unsupported.push(line); return; }
+    if (kind === 0) qubits = Number(m[1]);
+    else if (kind === 1) add(sdk === "Cirq" ? `R${m[1]}` : m[1], m[3], undefined, m[2]);
+    else if (kind === 4) add("M", m[1]);
+    else add(m[1], m[2], m[3]);
   });
   if (!qubits) return { warning: "Add a valid qubit or circuit declaration before synchronising." };
   if (gates.some(g => g.qubit >= qubits || (g.target ?? 0) >= qubits)) return { warning: "A gate references a qubit outside the declared register." };
