@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from ..database import get_session
-from ..db_models import User, SavedProject,  ProjectCollaborator
+from ..db_models import User, SavedProject, ProjectCollaborator
 from ..schemas import (
     SavedProjectCreate,
     SavedProjectUpdate,
@@ -27,11 +27,13 @@ def get_projects(
         )
     ).all()
 
-    shared_project_ids = session.exec(
-        select(ProjectCollaborator.project_id).where(
+    memberships = session.exec(
+        select(ProjectCollaborator).where(
             ProjectCollaborator.user_id == current_user.id
         )
     ).all()
+    permissions = {item.project_id: item.permission for item in memberships}
+    shared_project_ids = list(permissions)
 
     shared_projects = []
 
@@ -42,7 +44,15 @@ def get_projects(
             )
         ).all()
 
-    return owned_projects + shared_projects
+    return [
+        SavedProjectResponse.model_validate(project).model_copy(update={
+            "permission": "owner" if project.user_id == current_user.id else permissions[project.id]
+        })
+        for project in sorted(
+            {project.id: project for project in owned_projects + shared_projects}.values(),
+            key=lambda project: project.updated_at, reverse=True,
+        )
+    ]
 
 @router.post("", response_model=SavedProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
@@ -91,7 +101,9 @@ def get_project(
     if not is_owner and not is_collaborator:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    return project
+    return SavedProjectResponse.model_validate(project).model_copy(update={
+        "permission": "owner" if is_owner else is_collaborator.permission
+    })
 
 @router.patch("/{project_id}", response_model=SavedProjectResponse)
 def update_project(
@@ -143,7 +155,9 @@ def update_project(
     session.commit()
     session.refresh(project)
 
-    return project
+    return SavedProjectResponse.model_validate(project).model_copy(update={
+        "permission": "owner" if is_owner else collaborator.permission
+    })
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -156,6 +170,12 @@ def delete_project(
     if not project or project.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Project not found")
         
+    collaborators = session.exec(
+        select(ProjectCollaborator).where(ProjectCollaborator.project_id == project_id)
+    ).all()
+    for collaborator in collaborators:
+        session.delete(collaborator)
+    session.flush()
     session.delete(project)
     session.commit()
 

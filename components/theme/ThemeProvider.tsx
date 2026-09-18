@@ -59,6 +59,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     const initialTheme = readTheme();
     themeRef.current = initialTheme;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reconcile the saved browser theme after hydration.
     setThemeState(initialTheme);
     applyTheme(initialTheme);
     setMounted(true);

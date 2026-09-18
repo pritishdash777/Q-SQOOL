@@ -10,6 +10,7 @@ export default function StorageConsent() {
     // Only read localStorage on the client side after mount to avoid hydration mismatch
     const consent = localStorage.getItem("q-sqool-storage-consent");
     if (!consent) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Read browser consent only after hydration.
       setShow(true);
     }
   }, []);

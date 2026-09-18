@@ -1,3 +1,5 @@
+import type { Circuit } from "./quantum-types";
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -38,7 +40,8 @@ export interface LearningProgress {
 export interface CloudProject {
   id: string;
   name: string;
-  circuit_json: any;
+  circuit_json: Circuit;
+  permission: "owner" | "view" | "edit";
   sdk: string;
   created_at: string;
   updated_at: string;

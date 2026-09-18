@@ -46,8 +46,8 @@ function LoginContent() {
       }
       
       router.replace(isLogin ? nextPath : `/profile?setup=1&next=${encodeURIComponent(nextPath)}`);
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
       submitting.current = false;
       setLoading(false);

@@ -43,7 +43,7 @@ class SavedProject(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     user_id: str = Field(index=True, foreign_key="user.id")
     name: str
-    circuit_json: dict = Field(default={}, sa_column=Column(JSON))
+    circuit_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
     sdk: str = Field(default="Qiskit")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

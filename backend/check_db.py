@@ -1,13 +1,16 @@
-import sqlite3
+"""List tables in the configured database without changing its schema.
 
-connection = sqlite3.connect("../q_sqool.db")
+Run from the repository root: backend/.venv/bin/python backend/check_db.py
+"""
+from sqlalchemy import inspect
+from app.database import engine
 
-tables = connection.execute(
-    "SELECT name FROM sqlite_master WHERE type='table'"
-).fetchall()
 
-print("Tables:")
-for table in tables:
-    print("-", table[0])
+def main():
+    print("Tables:")
+    for table in inspect(engine).get_table_names():
+        print("-", table)
 
-connection.close()
+
+if __name__ == "__main__":
+    main()

@@ -39,6 +39,7 @@ export function LandingPage() {
   const { resolvedTheme, toggleTheme, mounted } = useTheme();
   const [mode, setMode] = useState(1);
   const [angle, setAngle] = useState(90);
+  const [measurement, setMeasurement] = useState({ counts: [0, 0], last: -1, sequence: 0 });
   const [stage, setStage] = useState(2);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -47,6 +48,21 @@ export function LandingPage() {
   const still = paused || reduced;
   const probabilityOne = Math.round(Math.sin(angle * Math.PI / 360) ** 2 * 100);
   const concept = concepts[mode];
+  const shots = measurement.counts[0] + measurement.counts[1];
+  const resetMeasurements = () => setMeasurement({ counts: [0, 0], last: -1, sequence: 0 });
+  const measure = (count: number) => {
+    const counts = [0, 0];
+    let last = 0;
+    const probability = Math.sin(angle * Math.PI / 360) ** 2;
+    for (let shot = 0; shot < count; shot++) {
+      last = Math.random() < probability ? 1 : 0;
+      counts[last]++;
+    }
+    setMeasurement(previous => ({
+      counts: previous.counts.map((value, index) => value + counts[index]),
+      last, sequence: previous.sequence + 1,
+    }));
+  };
   const activeStage = stages[stage];
   const code = `from qiskit import QuantumCircuit\n\nqc = QuantumCircuit(2)${activeStage.code ? `\n${activeStage.code}` : ""}\n`;
 
@@ -158,19 +174,35 @@ export function LandingPage() {
           <div className="qh-sculpture-grid" aria-hidden="true" />
           <div className="qh-orbit-fallback" aria-hidden="true"><i /><i /><i /></div>
           <QuantumSculpture mode={mode} angle={angle} paused={still} />
+          {measurement.last >= 0 && <div key={measurement.sequence} className="qh-measure-reveal" aria-hidden="true">
+            <span className="qh-measure-wave" /><span className="qh-measure-result"><small>MEASURED</small><strong>|{concept.outcomes[measurement.last]}⟩</strong></span>
+          </div>}
           <span className="qh-scene-coordinate qh-coordinate-top" aria-hidden="true">ψ / SPACE OF POSSIBILITIES</span>
           <span className="qh-scene-coordinate qh-coordinate-bottom" aria-hidden="true">θ {String(angle).padStart(3, "0")}° &nbsp; · &nbsp; φ 000°</span>
           <div className="qh-orb-caption"><span className="qh-crosshair" aria-hidden="true">+</span><span>{concept.label}<small>Generative artwork · Move your cursor to explore</small></span></div>
         </div>
         <div className="qh-concept-controls">
           <div className="qh-concept-tabs" role="group" aria-label="Explore quantum concepts">{concepts.map((item, index) =>
-            <button type="button" key={item.title} onClick={() => setMode(index)} aria-pressed={mode === index}><span>0{index + 1}</span>{item.title}</button>)}
+            <button type="button" key={item.title} onClick={() => { setMode(index); resetMeasurements(); }} aria-pressed={mode === index}><span>0{index + 1}</span>{item.title}</button>)}
           </div>
           <div className="qh-state-readout"><span className="qh-mono">|ψ⟩ = {concept.formula}</span><span className="qh-theory-badge">IDEAL MODEL</span></div>
           <div className="qh-angle-control"><label htmlFor="qh-angle">{mode === 2 ? "Phase" : "Rotation"} θ</label><input id="qh-angle" type="range" min="0" max="180" step="1" value={angle}
-            onChange={event => setAngle(Number(event.target.value))} aria-valuetext={`${angle} degrees; ${100 - probabilityOne}% probability of ${concept.outcomes[0]}, ${probabilityOne}% probability of ${concept.outcomes[1]}`} /><output htmlFor="qh-angle">{angle}°</output></div>
+            onChange={event => { setAngle(Number(event.target.value)); resetMeasurements(); }} aria-valuetext={`${angle} degrees; ${100 - probabilityOne}% probability of ${concept.outcomes[0]}, ${probabilityOne}% probability of ${concept.outcomes[1]}`} /><output htmlFor="qh-angle">{angle}°</output></div>
           <div className="qh-state-probabilities">{[100 - probabilityOne, probabilityOne].map((value, index) =>
             <div key={index}><span>|{concept.outcomes[index]}⟩ <strong>{value}%</strong></span><div role="meter" aria-label={`Probability of ${concept.outcomes[index]}`} aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${value}%` }} /></div></div>)}
+          </div>
+          <div className="qh-measure-panel">
+            <div className="qh-measure-heading"><span>MAKE POSSIBILITY REAL</span><button type="button" onClick={resetMeasurements} disabled={!shots}>Reset</button></div>
+            <div className="qh-measure-actions">
+              <button type="button" className="qh-measure-trigger" onClick={() => measure(1)}><Sparkles size={15} /> Measure a state <ArrowUpRight size={15} /></button>
+              <button type="button" className="qh-measure-batch" onClick={() => measure(100)}>Run 100 shots</button>
+            </div>
+            <p className="qh-measure-status" role="status">{shots ? `${shots.toLocaleString()} shots · Last outcome |${concept.outcomes[measurement.last]}⟩` : "One measurement. One outcome. What will you see?"}</p>
+            {shots > 0 && <div className="qh-measure-histogram" aria-label="Observed measurement results">{measurement.counts.map((count, index) => <div key={index}>
+              <span>|{concept.outcomes[index]}⟩ <strong>{count.toLocaleString()} · {Math.round(count / shots * 100)}%</strong></span>
+              <div role="meter" aria-label={`Observed percentage of ${concept.outcomes[index]}`} aria-valuenow={count / shots * 100} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${count / shots * 100}%` }} /></div>
+            </div>)}</div>}
+            <p className="qh-measure-note">Simulated shots. Each shot prepares the selected state again.</p>
           </div>
         </div>
       </div>

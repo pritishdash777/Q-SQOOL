@@ -29,6 +29,7 @@ export function QuantumSculpture({ mode, angle, paused }: Props) {
     let pointerX = 0, pointerY = 0, tiltX = 0, tiltY = 0;
     const positions = new Float32Array(180 * 12 * 3);
     let initialized = false;
+    let lastMode = settings.current.mode, lastAngle = settings.current.angle;
 
     const project = (x: number, y: number, z: number, spin: number) => {
       const yaw = spin + tiltX * .28;
@@ -50,9 +51,14 @@ export function QuantumSculpture({ mode, angle, paused }: Props) {
       const delta = Math.min(50, now - previous || 16);
       if (!still && delta < 30) { frame = requestAnimationFrame(draw); return; }
       previous = now;
-      if (!still) time += delta / 1000;
-      tiltX += (pointerX - tiltX) * .075;
-      tiltY += (pointerY - tiltY) * .075;
+      // Advance the artwork at a steady pace.
+      const smoothing = .075;
+      if (!still) {
+        time += delta / 1000;
+        tiltX += (pointerX - tiltX) * smoothing;
+        tiltY += (pointerY - tiltY) * smoothing;
+      }
+      const shapeChanged = mode !== lastMode || angle !== lastAngle;
       const dark = theme === "dark";
       context.clearRect(0, 0, width, height);
       context.globalCompositeOperation = dark ? "lighter" : "source-over";
@@ -103,7 +109,8 @@ export function QuantumSculpture({ mode, angle, paused }: Props) {
             z = radius * Math.sin(u);
           }
           const breathe = 1 + .025 * Math.sin(time * .8 + angle / 90);
-          const amount = !initialized || still ? 1 : .075;
+          // A paused redraw must preserve particle positions.
+          const amount = !initialized || (still && shapeChanged) ? 1 : still ? 0 : smoothing;
           positions[index] += (x * breathe - positions[index]) * amount;
           positions[index + 1] += (y * breathe - positions[index + 1]) * amount;
           positions[index + 2] += (z * breathe - positions[index + 2]) * amount;
@@ -116,6 +123,7 @@ export function QuantumSculpture({ mode, angle, paused }: Props) {
         }
       }
       initialized = true;
+      lastMode = mode; lastAngle = angle;
       // Connect neighboring points into a softly illuminated woven surface.
       context.lineWidth = .55;
       for (let i = 1; i < particles.length; i++) {
