@@ -8,6 +8,7 @@ import { safeNextPath } from "@/lib/navigation";
 import { registerUser, loginUser } from "@/lib/auth-api";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { GoogleSignIn } from "@/components/auth/GoogleSignIn";
 
 import { Suspense } from "react";
 
@@ -19,6 +20,7 @@ function LoginContent() {
   
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -28,7 +30,7 @@ function LoginContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting.current) return;
+    if (submitting.current || googleBusy) return;
     submitting.current = true;
     setLoading(true);
     setError(null);
@@ -91,7 +93,7 @@ function LoginContent() {
             <button 
               type="button"
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${isLogin ? 'bg-secondary text-secondary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              disabled={loading}
+              disabled={loading || googleBusy}
               onClick={() => setIsLogin(true)}
             >
               Sign In
@@ -99,12 +101,17 @@ function LoginContent() {
             <button 
               type="button"
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${!isLogin ? 'bg-secondary text-secondary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              disabled={loading}
+              disabled={loading || googleBusy}
               onClick={() => setIsLogin(false)}
             >
               Register
             </button>
           </div>
+
+          <GoogleSignIn disabled={loading} onBusyChange={setGoogleBusy} onSuccess={data => {
+            toast.success(data.is_new_user ? "Account created with Google" : "Signed in with Google");
+            router.replace(data.is_new_user ? `/profile?setup=1&next=${encodeURIComponent(nextPath)}` : nextPath);
+          }} />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
@@ -165,7 +172,7 @@ function LoginContent() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || googleBusy}
               className="w-full rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-[0_0_20px_rgba(187,143,255,.2)] transition hover:shadow-[0_0_30px_rgba(187,143,255,.3)] disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2 mt-6"
             >
               {loading && <Loader2 className="size-4 animate-spin" />}

@@ -73,6 +73,31 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
   return data;
 }
 
+export type GoogleAuthResponse = AuthResponse & { is_new_user: boolean };
+export type GoogleCredential = { credential: string; nonce: string; password?: string };
+
+export function getGoogleSignInConfig(signal?: AbortSignal) {
+  return requestJSON<{ enabled: boolean }>("/api/auth/google/config", { signal });
+}
+
+export function createGoogleChallenge(signal?: AbortSignal) {
+  return requestJSON<{ client_id: string; nonce: string; expires_in: number }>(
+    "/api/auth/google/challenge", { method: "POST", signal },
+  );
+}
+
+export async function loginWithGoogle(credential: GoogleCredential, signal?: AbortSignal): Promise<GoogleAuthResponse> {
+  const previousToken = getStoredToken();
+  const data = await requestJSON<GoogleAuthResponse>("/api/auth/google", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credential), signal,
+  });
+  signal?.throwIfAborted();
+  if (getStoredToken() !== previousToken) throw new ApiError("Your session changed. Please sign in again.", 401);
+  setStoredAuth(data);
+  return data;
+}
+
 export function logoutUser() {
   removeStoredToken();
 }

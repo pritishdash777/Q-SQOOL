@@ -51,3 +51,19 @@ backend/.venv/bin/python backend/check_db.py
 Tests use isolated in-memory SQLite databases. Collaboration deletion tests enable
 foreign-key constraints. PostgreSQL deployment still needs validation against a
 real PostgreSQL instance.
+
+## Google authentication
+
+Optional Google sign-in is configured with `GOOGLE_CLIENT_ID` in the backend
+environment. See the [Google Cloud setup instructions](../README.md#enable-google-sign-in).
+Install `backend/requirements.txt` and restart the backend to create the additive
+identity/challenge tables. No existing user data needs to be reset.
+
+- `GET /api/auth/google/config`: whether the provider is configured.
+- `POST /api/auth/google/challenge`: public client ID and a five-minute nonce.
+- `POST /api/auth/google`: verified Google credential, nonce, and optional existing
+  Q-SQOOL password for linking; returns the normal session plus `is_new_user`.
+
+Google login never accepts an email/profile supplied by the browser as identity.
+An existing email requires password confirmation before linking. No Gmail scopes,
+Google refresh tokens, client secrets, or OAuth redirect routes are used.
