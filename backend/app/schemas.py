@@ -23,6 +23,20 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserSummary
 
+class GoogleLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    credential: str = Field(min_length=1, max_length=10000)
+    nonce: str = Field(min_length=32, max_length=128)
+    password: Optional[str] = Field(default=None, max_length=1024)
+
+class GoogleTokenResponse(TokenResponse):
+    is_new_user: bool
+
+class GoogleChallengeResponse(BaseModel):
+    client_id: str
+    nonce: str
+    expires_in: int
+
 class ProfileResponse(BaseModel):
     id: int
     user_id: str

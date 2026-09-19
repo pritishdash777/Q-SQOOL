@@ -12,6 +12,16 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class GoogleIdentity(SQLModel, table=True):
+    # Google's stable subject, never an email address, identifies a linked account.
+    subject: str = Field(primary_key=True)
+    user_id: str = Field(unique=True, index=True, foreign_key="user.id")
+
+class GoogleLoginChallenge(SQLModel, table=True):
+    nonce_hash: str = Field(primary_key=True)
+    expires_at: int = Field(index=True)
+    failed_attempts: int = Field(default=0)
+
 class Profile(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: str = Field(index=True, unique=True, foreign_key="user.id")

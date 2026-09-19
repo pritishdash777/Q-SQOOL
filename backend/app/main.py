@@ -11,7 +11,7 @@ from .models import SimulateRequest, SimulationResponse, OptimizeRequest
 from .simulator import SimulationError, simulate_circuit
 from .optimizer import optimize_circuit
 from .database import create_db_and_tables
-from .routers import authentication, profile, progress, projects
+from .routers import authentication, google_authentication, profile, progress, projects
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -60,6 +60,7 @@ async def simulation_error_handler(
     )
 
 app.include_router(authentication.router)
+app.include_router(google_authentication.router)
 app.include_router(profile.router)
 app.include_router(progress.router)
 app.include_router(projects.router)
@@ -88,5 +89,4 @@ async def simulate(request: SimulateRequest):
 @app.post("/api/optimize")
 async def optimize(request: OptimizeRequest):
     return optimize_circuit(request.circuit)
-
 

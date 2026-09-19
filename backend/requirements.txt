@@ -11,3 +11,4 @@ pwdlib[argon2]
 email-validator
 psycopg[binary]
 httpx
+google-auth[requests]>=2.40,<3
