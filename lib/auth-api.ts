@@ -125,6 +125,11 @@ export async function getProgress(options: AuthRequest = {}): Promise<LearningPr
   return fetchWithAuth("/api/progress", options);
 }
 
+export type ProgressSnapshot = { xp: number; modules: LearningProgress[]; last_visited_path?: string | null; activity_days?: string[] };
+export function getProgressSummary(options: AuthRequest = {}): Promise<ProgressSnapshot> {
+  return fetchWithAuth("/api/progress/summary", options);
+}
+
 export async function updateProgress(moduleId: string, progress: number, completed?: boolean, quiz_score?: number): Promise<LearningProgress> {
   return fetchWithAuth(`/api/progress/modules/${moduleId}`, {
     method: "PATCH",
@@ -136,7 +141,7 @@ export async function getProjects(options: AuthRequest = {}): Promise<CloudProje
   return fetchWithAuth("/api/projects", options);
 }
 
-export function saveProgress(progress: UserProgress, options: AuthRequest): Promise<{ xp: number; modules: LearningProgress[] }> {
+export function saveProgress(progress: UserProgress, options: AuthRequest): Promise<ProgressSnapshot> {
   return fetchWithAuth("/api/progress", {
     ...options, method: "PUT", body: JSON.stringify(progress),
   });

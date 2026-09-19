@@ -141,3 +141,12 @@ PYTHONPATH=.:backend backend/.venv/bin/python -m pytest backend/tests -q
 Circuit requests time out after 20 seconds; account/progress requests after 10
 seconds. Stopping a browser request discards its result; backend computation may
 continue. Unavailable simulation/optimization endpoints display a retry action.
+
+## SIH audit and demonstration
+
+See [the SIH audit handoff](docs/SIH-DEMO-AUDIT.md) for the feature matrix, verified
+checks, remaining configuration and demonstration sequence. Progress now uses
+`GET /api/progress/summary` and an additive `learningactivity` table. Deploy the
+updated backend before the frontend. Streaks use actual learning advances recorded
+on UTC days; existing streak history is not fabricated. No deployment was performed
+as part of the audit.

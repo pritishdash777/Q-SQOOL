@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import uuid
 from sqlmodel import SQLModel, Field, Column, JSON
 from sqlalchemy import UniqueConstraint
@@ -48,6 +48,10 @@ class LearningProgress(SQLModel, table=True):
     completed: bool = Field(default=False)
     completed_lessons: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False, server_default="[]"))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LearningActivity(SQLModel, table=True):
+    user_id: str = Field(primary_key=True, foreign_key="user.id")
+    day: date = Field(primary_key=True)
 
 class SavedProject(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)

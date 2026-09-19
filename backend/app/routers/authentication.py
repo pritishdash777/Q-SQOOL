@@ -60,6 +60,9 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="This account is disabled.")
         
     access_token = create_access_token(subject=user.id)
     

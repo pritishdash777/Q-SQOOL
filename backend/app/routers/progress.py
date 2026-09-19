@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import update
 from sqlmodel import Session, select
 from ..database import get_session
-from ..db_models import User, LearningProgress, Profile
+from ..db_models import User, LearningProgress, Profile, LearningActivity
 from ..schemas import ProgressResponse, ProgressUpdate, UserProgressSync
 from ..dependencies import get_current_user
 from ..learning import REWARDS, valid_lessons, earned_xp
@@ -33,6 +33,7 @@ def merge_module(session: Session, user_id: str, module_id: str, percent: int,
     )).first()
     if record is None:
         record = LearningProgress(user_id=user_id, module_id=module_id)
+    before = (record.progress, record.completed, record.quiz_score or 0, set(record.completed_lessons))
     lesson_ids = set(record.completed_lessons) | set(lessons)
     # Preserve completions from clients predating lesson IDs.
     if record.completed or completed or percent == 100 or module_id in lesson_ids:
@@ -42,7 +43,12 @@ def merge_module(session: Session, user_id: str, module_id: str, percent: int,
     record.progress = 100 if record.completed else max(record.progress, percent)
     if quiz_score is not None:
         record.quiz_score = max(record.quiz_score or 0, quiz_score)
-    record.updated_at = datetime.now(timezone.utc)
+    changed = before != (record.progress, record.completed, record.quiz_score or 0, set(record.completed_lessons))
+    if changed:
+        record.updated_at = datetime.now(timezone.utc)
+        day = record.updated_at.date()
+        if session.get(LearningActivity, (user_id, day)) is None:
+            session.add(LearningActivity(user_id=user_id, day=day))
     session.add(record)
     session.flush()
     return record
@@ -63,6 +69,23 @@ def get_progress(current_user: User = Depends(get_current_user), session: Sessio
     return records(session, current_user.id)
 
 
+def progress_snapshot(session: Session, user_id: str):
+    profile = session.exec(select(Profile).where(Profile.user_id == user_id)).one()
+    return {
+        "xp": earned_xp(session, user_id),
+        "modules": [ProgressResponse.model_validate(record, from_attributes=True) for record in records(session, user_id)],
+        "last_visited_path": profile.last_visited_path,
+        "activity_days": [day.isoformat() for day in session.exec(
+            select(LearningActivity.day).where(LearningActivity.user_id == user_id).order_by(LearningActivity.day)
+        ).all()],
+    }
+
+
+@router.get("/summary")
+def summary(current_user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    return progress_snapshot(session, current_user.id)
+
+
 @router.put("")
 def sync_progress(sync_data: UserProgressSync, current_user: User = Depends(get_current_user),
                   session: Session = Depends(get_session)):
@@ -74,10 +97,9 @@ def sync_progress(sync_data: UserProgressSync, current_user: User = Depends(get_
     for module_id, module in sync_data.modules.items():
         merge_module(session, current_user.id, module_id, module.percent,
                      module.completed, module.quizScore, module.completedLessons)
-    profile = update_totals(session, current_user.id, sync_data.lastVisitedPath)
+    update_totals(session, current_user.id, sync_data.lastVisitedPath)
     session.commit()
-    return {"xp": profile.xp, "modules": [ProgressResponse.model_validate(record, from_attributes=True)
-                                         for record in records(session, current_user.id)]}
+    return progress_snapshot(session, current_user.id)
 
 
 @router.patch("/modules/{module_id}", response_model=ProgressResponse)

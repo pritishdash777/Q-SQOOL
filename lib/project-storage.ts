@@ -1,23 +1,8 @@
 import type { Circuit, LocalProject } from './quantum-types';
 
-const gates = new Set(['X', 'Y', 'Z', 'H', 'S', 'T', 'RX', 'RY', 'RZ', 'CX', 'CZ', 'M']);
+import { validateCircuit } from './circuit';
 
-export function isCircuit(value: unknown): value is Circuit {
-  if (!value || typeof value !== 'object') return false;
-  const circuit = value as Circuit;
-  if (!Number.isInteger(circuit.qubits) || circuit.qubits < 1 || circuit.qubits > 5 || !Array.isArray(circuit.gates)) return false;
-  const ids = new Set<number>();
-  return circuit.gates.every(gate => {
-    if (!gate || !Number.isInteger(gate.id) || ids.has(gate.id) || !gates.has(gate.type) ||
-      !Number.isInteger(gate.qubit) || gate.qubit < 0 || gate.qubit >= circuit.qubits ||
-      !Number.isInteger(gate.column) || gate.column < 0) return false;
-    ids.add(gate.id);
-    if (gate.type === 'CX' || gate.type === 'CZ') {
-      if (!Number.isInteger(gate.target) || gate.target! < 0 || gate.target! >= circuit.qubits || gate.target === gate.qubit) return false;
-    }
-    return gate.angle === undefined || Number.isFinite(gate.angle);
-  });
-}
+export function isCircuit(value: unknown): value is Circuit { return !validateCircuit(value); }
 
 export function projectStorageKey(userId: string): string {
   return `q-sqool-projects:v2:${userId}`;

@@ -13,6 +13,7 @@ from ..schemas import (
 )
 from ..dependencies import get_current_user
 from ..models import Circuit  # Validate using existing Circuit
+from ..simulator import build_qiskit_circuit
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -61,7 +62,7 @@ def create_project(
     session: Session = Depends(get_session)
 ):
     try:
-        Circuit.model_validate(project_create.circuit_json)
+        build_qiskit_circuit(Circuit.model_validate(project_create.circuit_json))
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Invalid circuit json: {str(e)}")
         
@@ -137,7 +138,7 @@ def update_project(
 
     if project_update.circuit_json is not None:
         try:
-            Circuit.model_validate(project_update.circuit_json)
+            build_qiskit_circuit(Circuit.model_validate(project_update.circuit_json))
         except Exception as e:
             raise HTTPException(
                 status_code=422,

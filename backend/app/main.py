@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 
 from .models import SimulateRequest, SimulationResponse, OptimizeRequest
 from .simulator import SimulationError, simulate_circuit
@@ -88,5 +89,4 @@ async def simulate(request: SimulateRequest):
 
 @app.post("/api/optimize")
 async def optimize(request: OptimizeRequest):
-    return optimize_circuit(request.circuit)
-
+    return jsonable_encoder(optimize_circuit(request.circuit), exclude_none=True)

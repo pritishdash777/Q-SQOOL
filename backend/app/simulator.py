@@ -37,6 +37,7 @@ def build_qiskit_circuit(circuit: Circuit) -> QuantumCircuit:
     qc = QuantumCircuit(circuit.qubits, circuit.qubits)
 
     measurement_exists = False
+    ids = set()
 
     # Execute gates in column order.
     sorted_gates = sorted(
@@ -47,6 +48,13 @@ def build_qiskit_circuit(circuit: Circuit) -> QuantumCircuit:
     for gate in sorted_gates:
         gate_id = gate.id
         qubit = gate.qubit
+        if gate_id in ids:
+            raise SimulationError("INVALID_GATE", "Gate IDs must be unique.", gate_id)
+        ids.add(gate_id)
+        if gate.type not in {"CX", "CZ"} and gate.target is not None:
+            raise SimulationError("INVALID_TARGET", "Only CX and CZ accept a target.", gate_id)
+        if gate.type not in {"RX", "RY", "RZ"} and gate.angle is not None:
+            raise SimulationError("INVALID_ANGLE", "Only rotation gates accept angles.", gate_id)
 
         # Validate main qubit.
         if qubit >= circuit.qubits:

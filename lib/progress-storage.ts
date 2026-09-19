@@ -43,11 +43,12 @@ export function mergeProgress(local: UserProgress, remote: UserProgress): UserPr
     } : module;
   }
   return normalizeProgress({ ...remote, ...local, modules,
-    lastVisitedPath: local.lastVisitedPath || remote.lastVisitedPath });
+    activityDays: [...new Set([...(remote.activityDays || []), ...(local.activityDays || [])])].sort(),
+    lastVisitedPath: local.pendingSync ? local.lastVisitedPath || remote.lastVisitedPath : remote.lastVisitedPath || local.lastVisitedPath });
 }
 
-export function remoteProgress(userId: string, records: LearningProgress[], path?: string | null): UserProgress {
-  return normalizeProgress({ ...createEmptyProgress(userId), lastVisitedPath: path || undefined,
+export function remoteProgress(userId: string, records: LearningProgress[], path?: string | null, activityDays: string[] = []): UserProgress {
+  return normalizeProgress({ ...createEmptyProgress(userId), lastVisitedPath: path || undefined, activityDays,
     modules: Object.fromEntries(records.map(record => [record.module_id, {
       moduleId: record.module_id, completed: record.completed, percent: record.progress,
       quizScore: record.quiz_score, completedLessons: record.completed_lessons || [], updatedAt: record.updated_at,

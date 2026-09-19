@@ -26,6 +26,7 @@ function subscribeAuth(listener: () => void) {
 
 function AccountProgress({ children, token }: { children: ReactNode; token: string | null }) {
   const session = useRef<ProgressSession | null>(null);
+  const retryRef = useRef(() => {});
   const [state, setState] = useState<Partial<ProgressState>>({ loading: true, syncStatus: "idle" });
   useEffect(() => {
     let active = true;
@@ -45,13 +46,14 @@ function AccountProgress({ children, token }: { children: ReactNode; token: stri
     };
     void initialize();
     const retry = () => { if (session.current) void session.current.refresh(); else void initialize(); };
+    retryRef.current = retry;
     // Invalidate work synchronously on logout, before React rerenders the keyed provider.
     const authChanged = () => { if (getStoredToken() !== token) stop(); };
     window.addEventListener(AUTH_CHANGED, authChanged);
     window.addEventListener("online", retry);
     window.addEventListener("focus", retry);
     return () => {
-      active = false; stop();
+      active = false; stop(); session.current = null; retryRef.current = () => {};
       window.removeEventListener(AUTH_CHANGED, authChanged);
       window.removeEventListener("online", retry);
       window.removeEventListener("focus", retry);
@@ -68,7 +70,7 @@ function AccountProgress({ children, token }: { children: ReactNode; token: stri
     completeLesson: (moduleId, lessonId) => updateModule(moduleId, {
       completed: true, percent: 100, completedLessons: [lessonId],
     }),
-    refreshProgress: () => { void session.current?.refresh(); },
+    refreshProgress: () => { retryRef.current(); },
   }}>{children}</ProgressContext.Provider>;
 }
 

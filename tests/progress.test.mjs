@@ -26,6 +26,7 @@ function fixture({ local = createEmptyProgress('A'), records = [] } = {}) {
       return { xp: progress.xp, modules: Object.values(progress.modules).map(module => record(module.moduleId, module.completedLessons, module.percent)) };
     },
   };
+  api.getProgressSummary = async options => ({ modules: await api.getProgress(options), last_visited_path: (await api.getProfile(options)).last_visited_path, activity_days: [] });
   const session = new ProgressSession(local.userId, local.userId === 'guest' ? null : 'token-A', state => publications.push(state), api);
   return { session, api, calls, writes, publications };
 }

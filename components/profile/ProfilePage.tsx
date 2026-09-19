@@ -8,9 +8,13 @@ import { getCurrentUser, getProfile, updateProfile, logoutUser, getProgress, get
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Loader2, LogOut, Save, User as UserIcon, BookOpen, FolderOpen, Award, CheckCircle2 } from "lucide-react";
+import { useProgress } from "@/components/progress/ProgressProvider";
+import { learningSummary } from "@/lib/learning-summary";
 
 export default function ProfilePage({ setup = false, nextPath = "/dashboard" }: { setup?: boolean; nextPath?: string }) {
   const router = useRouter();
+  const { progress: accountProgress } = useProgress();
+  const summary = learningSummary(accountProgress);
 
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -130,7 +134,7 @@ export default function ProfilePage({ setup = false, nextPath = "/dashboard" }: 
     .substring(0, 2)
     .toUpperCase() || "?";
 
-  const completedModules = progress.filter(p => p.completed).length;
+  const completedModules = accountProgress ? summary.completed : progress.filter(p => p.completed).length;
   const joinedDate = new Date(profile.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
 
   return (
@@ -148,7 +152,7 @@ export default function ProfilePage({ setup = false, nextPath = "/dashboard" }: 
             <h2 className="text-xl font-bold text-foreground">{profile.full_name}</h2>
             <p className="text-sm text-muted-foreground">{user?.email}</p>
             <div className="mt-4 inline-flex items-center gap-1 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
-              <Award className="size-3" /> {profile.xp} XP
+              <Award className="size-3" /> {accountProgress ? summary.xp : profile.xp} XP
             </div>
           </div>
 

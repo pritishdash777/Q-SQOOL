@@ -2,6 +2,17 @@ from __future__ import annotations
 from copy import deepcopy
 
 from .models import Circuit, CircuitGate
+from .simulator import build_qiskit_circuit
+
+
+def circuit_depth(circuit: Circuit) -> int:
+    layers = [0] * circuit.qubits
+    for gate in sorted(circuit.gates, key=lambda gate: (gate.column, gate.id)):
+        wires = _gate_qubits(gate)
+        layer = 1 + max(layers[q] for q in wires)
+        for q in wires:
+            layers[q] = layer
+    return max(layers, default=0)
 
 
 SELF_INVERSE_GATES = {"X", "Y", "Z", "H"}
@@ -58,7 +69,8 @@ def optimize_circuit(circuit: Circuit) -> dict:
     CX-CX, CZ-CZ with identical control/target.
     """
 
-    original_gates = deepcopy(circuit.gates)
+    build_qiskit_circuit(circuit)  # Apply the same validation as execution.
+    original_gates = sorted(deepcopy(circuit.gates), key=lambda gate: (gate.column, gate.id))
     remaining = list(original_gates)
     removed_ids: list[int] = []
 
@@ -95,8 +107,13 @@ def optimize_circuit(circuit: Circuit) -> dict:
         for gate in remaining
     ]
 
-    for new_column, gate in enumerate(optimized_gates):
-        gate.column = new_column
+    if removed_ids:
+        layers = [0] * circuit.qubits
+        for gate in optimized_gates:
+            wires = _gate_qubits(gate)
+            gate.column = max(layers[q] for q in wires)
+            for q in wires:
+                layers[q] = gate.column + 1
 
     optimized_circuit = Circuit(
         qubits=circuit.qubits,
@@ -141,5 +158,7 @@ def optimize_circuit(circuit: Circuit) -> dict:
         "originalGateCount": original_count,
         "optimizedGateCount": optimized_count,
         "reductionPercent": reduction_percent,
+        "originalDepth": circuit_depth(circuit),
+        "optimizedDepth": circuit_depth(optimized_circuit),
         "warning": warning,
     }

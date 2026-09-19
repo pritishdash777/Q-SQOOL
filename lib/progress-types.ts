@@ -16,4 +16,5 @@ export type UserProgress = {
   lastVisitedPath?: string;
   updatedAt: string;
   pendingSync: boolean;
+  activityDays?: string[];
 };

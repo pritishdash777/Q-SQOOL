@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { learningModules } from "@/lib/curriculum";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronRight, Code2, Copy, Menu, Moon, Orbit, Pause, Play, Plus, Sparkles, Sun, X } from "lucide-react";
@@ -276,7 +277,7 @@ export function LandingPage() {
           <p className="qh-tag">{tag}</p><h3>{name}</h3><strong>{subject}</strong><p>{copy}</p><span className="qh-path-action"><Icon size={16} />{lessons}<ArrowRight size={16} /></span>
         </Link>)}
       </div>
-      <div className="qh-path-footnote" data-reveal><span><i /> Built to take you from “what’s a qubit?” to “look what I built.”</span><Link href="/learn">View all 11 modules <ArrowUpRight size={15} /></Link></div>
+      <div className="qh-path-footnote" data-reveal><span><i /> Built to take you from “what’s a qubit?” to “look what I built.”</span><Link href="/learn">View all {learningModules.length} modules <ArrowUpRight size={15} /></Link></div>
     </section>
 
     <section className="qh-faq-section qh-container" aria-labelledby="qh-faq-title">
@@ -291,7 +292,7 @@ export function LandingPage() {
 
     <section className="qh-finale" aria-labelledby="qh-finale-title">
       <div className="qh-finale-orbits" aria-hidden="true"><i /><i /><i /><span /></div>
-      <div className="qh-container" data-reveal><p className="qh-eyebrow"><span className="qh-live-dot" /> THE NEXT POSSIBILITY IS YOURS</p><h2 id="qh-finale-title">The future is<br /><em>not a spectator sport.</em></h2><p>Learn Quantum. Build Circuits. Shape the Future.</p><Link href="/dashboard" className="qh-button qh-button-primary">Let’s build something quantum <ArrowUpRight size={20} /></Link><span className="qh-finale-note">Your curiosity is the only thing you need to bring.</span></div>
+      <div className="qh-container" data-reveal><p className="qh-eyebrow"><span className="qh-live-dot" /> THE NEXT POSSIBILITY IS YOURS</p><h2 id="qh-finale-title">The future is<br /><em>not a spectator sport.</em></h2><p>Learn Quantum. Build Circuits. Shape the Future.</p><Link href="/composer" className="qh-button qh-button-primary">Let’s build something quantum <ArrowUpRight size={20} /></Link><span className="qh-finale-note">Your curiosity is the only thing you need to bring.</span></div>
     </section>
 
     <BlochExplorer />

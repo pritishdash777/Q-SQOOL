@@ -23,26 +23,26 @@ GateName = Literal[
 class CircuitGate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    id: int
+    id: int = Field(strict=True)
     type: GateName
-    qubit: int = Field(ge=0)
-    column: int = Field(ge=0)
-    target: Optional[int] = Field(default=None, ge=0)
-    angle: Optional[float] = None
+    qubit: int = Field(ge=0, strict=True)
+    column: int = Field(ge=0, le=255, strict=True)
+    target: Optional[int] = Field(default=None, ge=0, strict=True)
+    angle: Optional[float] = Field(default=None, allow_inf_nan=False)
 
 
 class Circuit(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    qubits: int = Field(ge=1, le=5)
-    gates: list[CircuitGate]
+    qubits: int = Field(ge=1, le=5, strict=True)
+    gates: list[CircuitGate] = Field(max_length=256)
 
 
 class SimulateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     circuit: Circuit
-    shots: int = Field(ge=1, le=4096)
+    shots: int = Field(ge=1, le=4096, strict=True)
     simulator: Literal["qiskit_aer"] = "qiskit_aer"
 
 

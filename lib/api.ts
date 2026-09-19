@@ -34,11 +34,19 @@ export async function checkHealth(): Promise<boolean> {
   try { await requestJSON("/health", {}, 5000); return true; } catch { return false; }
 }
 
-export function simulateCircuit(circuit: Circuit, shots: number, signal?: AbortSignal) {
-  return requestJSON<import("./quantum-types").DemoResult>("/api/simulate", {
+export async function simulateCircuit(circuit: Circuit, shots: number, signal?: AbortSignal) {
+  const result = await requestJSON<import("./quantum-types").DemoResult & { success: boolean; shots: number }>("/api/simulate", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ circuit, shots, simulator: "qiskit_aer" }), signal,
   });
+  signal?.throwIfAborted();
+  const counts = result.counts;
+  if (!result.success || result.simulator !== "qiskit_aer" || result.shots !== shots || !counts ||
+    Object.entries(counts).some(([bits, count]) => bits.length !== circuit.qubits || !/^[01]+$/.test(bits) || !Number.isInteger(count) || count < 0) ||
+    Object.values(counts).reduce((sum, value) => sum + value, 0) !== shots) {
+    throw new ApiError("The backend returned invalid simulation counts. Please retry.", 502);
+  }
+  return { ...result, probabilities: Object.fromEntries(Object.entries(counts).map(([bits, count]) => [bits, count / shots])) };
 }
 
 export function optimizeCircuit(circuit: Circuit, signal?: AbortSignal) {

@@ -1,10 +1,10 @@
-import { getCurrentUser, getProfile, getProgress, saveProgress } from "./auth-api";
+import { getCurrentUser, getProgressSummary, saveProgress } from "./auth-api";
 import { getLocalProgress, saveLocalProgress, mergeProgress, normalizeProgress, remoteProgress } from "./progress-storage";
 import type { ModuleProgress, UserProgress } from "./progress-types";
 
 export type SyncStatus = "idle" | "local" | "syncing" | "synced" | "offline" | "error";
 export type ProgressState = { progress: UserProgress; loading: boolean; syncStatus: SyncStatus };
-const defaults = { getCurrentUser, getProfile, getProgress, saveProgress, getLocalProgress, saveLocalProgress };
+const defaults = { getCurrentUser, getProgressSummary, saveProgress, getLocalProgress, saveLocalProgress };
 
 // One instance per authenticated session. Requests always carry its captured token.
 export class ProgressSession {
@@ -32,17 +32,17 @@ export class ProgressSession {
   async refresh() {
     if (this.stopped || this.busy || !this.token) return;
     this.busy = true;
+    this.verified = false;
+    this.emit(this.state.progress, "syncing", this.state.loading);
     try {
       const user = await this.api.getCurrentUser(this.options());
       if (this.stopped) return;
       if (user.id !== this.userId) throw new Error("Session account does not match cached account");
-      this.verified = true;
-      const [records, profile] = await Promise.all([
-        this.api.getProgress(this.options()), this.api.getProfile(this.options()),
-      ]);
+      const snapshot = await this.api.getProgressSummary(this.options());
       if (this.stopped) return;
-      const merged = mergeProgress(this.state.progress, remoteProgress(this.userId, records, profile.last_visited_path));
-      const remote = remoteProgress(this.userId, records, profile.last_visited_path);
+      this.verified = true;
+      const remote = remoteProgress(this.userId, snapshot.modules, snapshot.last_visited_path, snapshot.activity_days);
+      const merged = mergeProgress(this.state.progress, remote);
       merged.pendingSync ||= Object.entries(merged.modules).some(([id, module]) => {
         const saved = remote.modules[id];
         return !saved || module.percent > saved.percent || (module.quizScore || 0) > (saved.quizScore || 0) ||
@@ -69,7 +69,12 @@ export class ProgressSession {
       } },
     });
     this.revision++;
-    this.emit(mergeProgress(updated, current), "local");
+    const merged = mergeProgress(updated, current);
+    const previous = current.modules[moduleId];
+    const next = merged.modules[moduleId];
+    const changed = next && (!previous || next.percent > previous.percent || (next.quizScore || 0) > (previous.quizScore || 0) || next.completedLessons.some(id => !previous.completedLessons.includes(id)));
+    if (this.userId === "guest" && changed) merged.activityDays = [...new Set([...(current.activityDays || []), now.slice(0, 10)])].sort();
+    this.emit(merged, "local");
     clearTimeout(this.timer);
     if (this.token) this.timer = setTimeout(() => void (this.verified ? this.flush() : this.refresh()), 500);
   }
@@ -84,7 +89,7 @@ export class ProgressSession {
     try {
       const remote = await this.api.saveProgress(sent, this.options());
       if (this.stopped) return;
-      const merged = mergeProgress(this.state.progress, remoteProgress(this.userId, remote.modules));
+      const merged = mergeProgress(this.state.progress, remoteProgress(this.userId, remote.modules, remote.last_visited_path, remote.activity_days));
       merged.pendingSync = revision !== this.revision;
       this.emit(merged, merged.pendingSync ? "local" : "synced");
       saved = true;
