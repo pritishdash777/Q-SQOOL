@@ -10,4 +10,4 @@ export type AIMode = "Optimise" | "Explain" | "Detect Errors";
 export type AILevel = "Beginner" | "Technical";
 export type AIAnalysis = { title: string; text: string; gateIds: number[]; before: Circuit; after: Circuit; warning?: string; reductionPercent?: number };
 export type ProjectVersion = { id: number; savedAt: string; circuit: Circuit };
-export type LocalProject = { id: number; name: string; updatedAt: string; circuit: Circuit; versions: ProjectVersion[] };
+export type LocalProject = { id: number | string; cloudId?: string; permission?: "owner" | "edit" | "view"; name: string; updatedAt: string; circuit: Circuit; versions: ProjectVersion[] };

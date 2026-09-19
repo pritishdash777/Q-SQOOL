@@ -3,43 +3,30 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowRight, Atom, BarChart3, BookOpen, Bot, CheckCircle2, ChevronDown,
+  ArrowRight, Atom, BookOpen, Bot, CheckCircle2,
   ChevronRight, Clock, Code2, Copy, Download, FlaskConical, Flame, FolderOpen,
-  Gauge, GraduationCap, Home, Layers, Lightbulb, Lock, Menu, Plus,
-  Redo2, Save, Search, Send, Settings, Sparkles, Terminal, TriangleAlert,
-  Undo2, Upload, Users, Wand2, X, Zap, ZoomIn,
-  Import,
+  Gauge, GraduationCap, Home, Layers, Lock, Menu, Plus,
+  Redo2, Save, Search, Settings, Sparkles, Terminal, TriangleAlert,
+  Undo2, Upload, Users, Wand2, X, Zap,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { LandingExperience } from "@/components/landing/LandingExperience";
 import { QuantumIntro } from "@/components/landing/QuantumIntro";
 import { LandingPage } from "@/components/landing/LandingPage";
-import { ScatterCard, ScatterText } from "@/components/effects/ScatterText";
-import { QuantumBackground } from "@/components/effects/QuantumBackground";
 import { QuantumWavePlayback } from "@/components/quantum-playback/QuantumWavePlayback";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Progress } from "@/components/ui/progress";
-import { Page, GateName, CircuitGate, Circuit, SDK, RunState, DemoResult, ResultsTab, AIMode, AILevel, AIAnalysis, ProjectVersion, LocalProject } from "../lib/quantum-types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Page, GateName, CircuitGate, Circuit, SDK, RunState, DemoResult, ResultsTab, AIMode, AILevel, AIAnalysis } from "../lib/quantum-types";
 import { simulateCircuit, optimizeCircuit } from "../lib/api";
 
 import { useProgress } from "@/components/progress/ProgressProvider";
 import SyncStatus from "@/components/progress/SyncStatus";
 import { getProfile, getStoredToken } from "@/lib/auth-api";
+import { ProjectsWorkspace } from "@/components/projects/ProjectsWorkspace";
 import { lessonPath } from "@/lib/progress-storage";
 
 const initialCircuit: Circuit = { qubits: 3, gates: [{ id: 1, type: "H", qubit: 0, column: 1 }, { id: 2, type: "CX", qubit: 0, target: 1, column: 3 }] };
-
-function recogniseCircuit(circuit: Circuit): DemoResult {
-  const ordered = [...circuit.gates].sort((a, b) => a.column - b.column).map(g => g.type).join("-");
-  if (ordered.includes("X-H-CX-H-M")) return { name: "Deutsch–Jozsa example", probabilities: { "00": 1 }, note: "This teaching preset represents a constant-oracle outcome." };
-  if (ordered.includes("H-H-CZ-H-X-M")) return { name: "Grover example", probabilities: { "00": .06, "01": .06, "10": .06, "11": .82 }, note: "This teaching preset amplifies the marked |11⟩ state." };
-  if (circuit.gates.some(g => g.type === "H" && g.qubit === 0) && circuit.gates.some(g => g.type === "CX" && g.qubit === 0 && g.target === 1)) return { name: "Bell state", probabilities: { "00": .5, "11": .5 }, note: "The deterministic preview recognises H followed by CX as an entangled Bell-state pattern." };
-  if (ordered === "H") return { name: "Single Hadamard", probabilities: { "0": .5, "1": .5 }, note: "An H gate prepares equal measurement probabilities from |0⟩." };
-  if (/^X-M$/.test(ordered)) return { name: "X then measurement", probabilities: { "0": 0, "1": 1 }, note: "X flips |0⟩ to |1⟩ before measurement." };
-  const width = Math.min(circuit.qubits, 5), zero = "0".repeat(width), one = "1".repeat(width);
-  return { name: "Custom circuit", probabilities: { [zero]: .75, [one]: .25 }, note: "No named preset matched, so Q-SQOOL is showing a fixed illustrative distribution." };
-}
 
 function analyseCircuit(circuit: Circuit, mode: AIMode, level: AILevel): AIAnalysis {
   const result = (details: Omit<AIAnalysis, "before" | "after" | "gateIds"> & Partial<AIAnalysis>): AIAnalysis => ({ before: circuit, after: circuit, gateIds: [], ...details });
@@ -180,80 +167,6 @@ function Brand({
 
 function Ambient() { return <><div className="aurora" /><div className="noise" /></>; }
 
-function Landing({ navigate }: { navigate: (page: Page) => void }) {
-  return (
-    <main id="top" className="quantum-grid q-landing min-h-screen overflow-hidden">
-      <QuantumBackground />
-      <Ambient />
-      <header className="relative z-20 mx-auto flex max-w-[1480px] items-center justify-between px-5 py-5 sm:px-8">
-        <Brand goHome={() => navigate("landing")} />
-        <div className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          <button onClick={() => navigate("learning")} className="transition hover:text-foreground">Curriculum</button>
-          <button onClick={() => navigate("lab")} className="transition hover:text-foreground">Quantum Lab</button>
-          <button onClick={() => navigate("code")} className="transition hover:text-foreground">SDKs</button>
-        </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-
-          <button
-            onClick={() => navigate("dashboard")}
-            className="rounded-xl border border-secondary/40 px-5 py-3 font-semibold text-secondary transition hover:bg-secondary/10"
-          >
-            Open workspace
-          </button>
-        </div>
-      </header>
-
-      <section className="relative mx-auto grid min-h-[690px] max-w-[1480px] items-center gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
-        <div className="page-enter relative z-10">
-          <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-4 py-2 text-xs font-semibold tracking-[.18em] text-primary uppercase"><Sparkles className="size-3.5" /> AI-powered quantum learning</div>
-          
-<ScatterCard className="landing-heading relative mt-3 flex items-center gap-0">
-  <Image
-    src="/q-sqool-mark.svg"
-    alt=""
-    width={130}
-    height={120}
-    priority
-    className="h-[5.5rem] w-[6.5rem] shrink-0 translate-y-4 object-contain sm:h-[7rem] sm:w-[8rem] lg:h-[8rem] lg:w-[9rem]"
-  />
-
-  <h1 aria-label="Q-SQOOL" className="glow-text -ml-2 whitespace-nowrap text-6xl font-black leading-none tracking-tight sm:-ml-3 sm:text-7xl lg:-ml-9 lg:text-8xl">
-    <ScatterText>-SQOOL</ScatterText>
-  </h1>
-</ScatterCard>
-
-          <p className="mt-7 max-w-3xl text-2xl font-medium leading-tight  text-foreground sm:text-3xl">Learn Quantum. Build Circuits. Shape the Future</p>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">Move from abstract theory to executable intuition through structured lessons, a visual circuit studio, multi-simulator workflows and contextual AI guidance.</p>
-          <div className="mt-9 flex flex-wrap gap-4">
-            <button onClick={() => navigate("lab")} className="group flex items-center gap-3 rounded-xl bg-primary px-6 py-3.5 font-semibold text-primary-foreground shadow-[0_0_45px_rgba(187,143,255,.24)] transition hover:-translate-y-1 hover:shadow-[0_0_65px_rgba(187,143,255,.36)]">Enter Quantum Lab <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" /></button>
-            <button onClick={() => navigate("learning")} className="flex items-center gap-3 rounded-xl border border-secondary/60 bg-secondary/5 px-6 py-3.5 font-semibold text-secondary transition hover:-translate-y-1 hover:bg-secondary hover:text-secondary-foreground"><GraduationCap className="size-4" /> Start learning</button>
-          </div>
-          <div className="mt-11 flex flex-wrap gap-7 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-secondary" /> Classical simulation</span>
-            <span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-secondary" /> Qiskit · Cirq · OpenQASM</span>
-            <span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-secondary" /> Adaptive curriculum</span>
-          </div>
-        </div>
-
-        <div className="relative hidden min-h-[560px] lg:block">
-          <div className="orb left-[13%] top-[5%] size-[430px]" /><div className="orb left-[23%] top-[15%] size-[330px] [animation-delay:-2s]" />
-          <div className="absolute left-1/2 top-1/2 size-28 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-2xl" />
-          <ScatterCard className="glass scan-line absolute left-[8%] top-[13%] w-[82%] rotate-[-3deg] rounded-3xl p-5 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-semibold"><FlaskConical className="size-4 text-secondary" /> <ScatterText>Bell State Studio</ScatterText></span><span className="rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1 text-xs text-secondary"><ScatterText>Statevector</ScatterText></span></div>
-            {[0, 1, 2].map(q => <div key={q} className="mb-9 grid grid-cols-[38px_1fr] items-center gap-3"><span className="font-mono text-xs text-muted-foreground"><ScatterText>{`q[${q}]`}</ScatterText></span><div className={`circuit-wire ${q < 2 ? "active" : ""}`}>{q === 0 && <span className="absolute -top-5 left-[20%] grid size-10 place-items-center rounded-lg border border-blue-400/40 bg-blue-500/20 font-mono"><ScatterText>H</ScatterText></span>}{q < 2 && <span className="absolute -top-4 left-[59%] grid size-8 place-items-center rounded-lg border border-rose-400/40 bg-rose-500/20 font-mono text-xs"><ScatterText>CX</ScatterText></span>}</div></div>)}
-            <div className="grid grid-cols-3 gap-3">{["|00⟩  50%", "|01⟩  0%", "|11⟩  50%"].map((v, i) => <div key={v} className="rounded-xl border border-white/8 bg-white/[.025] p-3 text-center font-mono text-xs text-muted-foreground"><div className={`mx-auto mb-2 w-full rounded-full ${i === 1 ? "h-1 bg-foreground/5" : "h-8 bg-gradient-to-t from-primary/30 to-secondary/70"}`} /><ScatterText>{v}</ScatterText></div>)}</div>
-          </ScatterCard>
-          <div className="glass absolute bottom-[4%] right-0 w-64 rounded-2xl p-4 [animation:float_6s_ease-in-out_infinite_reverse]"><div className="flex gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary/10"><Bot className="size-4 text-secondary" /></span><div><p className="text-sm font-semibold">Q-AI Insight</p><p className="mt-1 text-xs leading-5 text-muted-foreground">The H gate prepares equal amplitudes before CX entangles both qubits.</p></div></div></div>
-        </div>
-      </section>
-
-      <section className="relative mx-auto max-w-[1480px] px-5 pb-20 sm:px-8"><div className="grid gap-4 md:grid-cols-4">{[[BookOpen, "Learn", "Structured modules with live conceptual checks."], [FlaskConical, "Build", "Compose circuits visually, gate by gate."], [BarChart3, "Visualise", "Inspect amplitudes, states and measurements."], [Bot, "Understand", "Receive contextual explanations and guidance."]].map(([Icon, title, copy]) => { const I = Icon as typeof Home; return <article key={String(title)} className="glass hover-rise rounded-2xl p-6"><I className="size-5 text-secondary" /><h2 className="mt-6 text-xl font-semibold">{String(title)}</h2><p className="mt-3 text-sm leading-6 text-muted-foreground">{String(copy)}</p></article>; })}</div></section>
-      <LandingExperience navigate={navigate} />
-    </main>
-  );
-}
-
 function Shell({ page, navigate, children }: { page: Page; navigate: (page: Page) => void; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [initials, setInitials] = useState<string | null>(null);
@@ -262,6 +175,7 @@ function Shell({ page, navigate, children }: { page: Page; navigate: (page: Page
   const userId = accountProgress?.userId;
   useEffect(() => {
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Clear the previous account label while fetching the new profile.
     setInitials(null);
     if (userId && userId !== "guest") {
       getProfile({ token: getStoredToken() }).then(profile => {
@@ -273,7 +187,12 @@ function Shell({ page, navigate, children }: { page: Page; navigate: (page: Page
 
   return <main className={`quantum-grid min-h-screen ${page === "landing" ? "q-landing" : ""}`}><Ambient />
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[86px] flex-col items-center border-r border-border bg-sidebar/90 py-5 backdrop-blur-xl md:flex"><Brand compact goHome={() => navigate("landing")} /><nav className="mt-12 flex flex-1 flex-col gap-3">{navigation.map(({ id, label, icon: Icon }) => <button key={id} title={label} onClick={() => navigate(id)} className={`group relative grid size-12 place-items-center rounded-xl transition ${page === id || (page === "lesson" && id === "learning") ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"}`}>{(page === id || (page === "lesson" && id === "learning")) && <span className="absolute -left-[20px] h-7 w-0.5 rounded-full bg-primary shadow-[0_0_14px_#c6a7ff]" />}<Icon className="size-5" /><span className="pointer-events-none absolute left-14 z-50 w-max translate-x-2 rounded-lg border border-border bg-popover px-3 py-1.5 text-xs opacity-0 shadow-xl transition group-hover:translate-x-0 group-hover:opacity-100">{label}</span></button>)}</nav><button onClick={() => soon("Settings")} className="grid size-11 place-items-center rounded-xl text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground" aria-label="Settings"><Settings className="size-5" /></button></aside>
-    <header className="fixed inset-x-0 top-0 z-30 flex h-17 items-center justify-between border-b border-border bg-background/78 px-4 backdrop-blur-2xl md:left-[86px] md:px-7"><div className="flex items-center gap-3 md:hidden"><ThemeToggle /><button onClick={() => setMobileOpen(!mobileOpen)} className="grid size-10 place-items-center rounded-xl border border-border"><Menu className="size-5" /></button><Brand goHome={() => navigate("landing")} /></div><div className="hidden items-center gap-3 md:flex"><span className="size-2 rounded-full bg-secondary shadow-[0_0_15px_#43e7ff]" /><span className="text-sm font-medium text-muted-foreground">Q-SQOOL / <span className=" text-foreground">{page === "lesson" ? "Understanding Superposition" : navigation.find(n => n.id === page)?.label}</span></span></div><div className="flex items-center gap-2"><button onClick={() => soon("Collaboration")} className="hidden items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground transition hover:text-foreground sm:flex"><Users className="size-4" /> Collaborate</button><button onClick={() => navigate("profile")} className="grid size-10 place-items-center rounded-xl border border-primary/25 bg-primary/10 font-bold text-primary">{initials || <Users className="size-5" />}</button></div></header>
+    <header className="fixed inset-x-0 top-0 z-30 flex h-17 items-center justify-between border-b border-border bg-background/78 px-4 backdrop-blur-2xl md:left-[86px] md:px-7"><div className="flex items-center gap-3 md:hidden"><ThemeToggle /><button onClick={() => setMobileOpen(!mobileOpen)} className="grid size-10 place-items-center rounded-xl border border-border"><Menu className="size-5" /></button><Brand goHome={() => navigate("landing")} /></div><div className="hidden items-center gap-3 md:flex"><span className="size-2 rounded-full bg-secondary shadow-[0_0_15px_#43e7ff]" /><span className="text-sm font-medium text-muted-foreground">Q-SQOOL / <span className=" text-foreground">{page === "lesson" ? "Understanding Superposition" : navigation.find(n => n.id === page)?.label}</span></span></div><div className="flex items-center gap-2"><button
+  onClick={() => navigate("projects")}
+  className="hidden items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground transition hover:text-foreground sm:flex"
+>
+  <Users className="size-4" /> Collaborate
+</button><button aria-label="Your profile" onClick={() => navigate("profile")} className="grid size-10 place-items-center rounded-xl border border-primary/25 bg-primary/10 font-bold text-primary">{initials || <Users className="size-5" />}</button></div></header>
     {mobileOpen && <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}><div className="h-full w-72 border-r border-border bg-sidebar p-5" onClick={e => e.stopPropagation()}><div className="flex items-center justify-between"><Brand goHome={() => navigate("landing")} /><button onClick={() => setMobileOpen(false)}><X /></button></div><div className="mt-10 space-y-2">{navigation.map(({ id, label, icon: Icon }) => <button key={id} onClick={() => { navigate(id); setMobileOpen(false) }} className={`flex w-full items-center gap-3 rounded-xl p-3 ${page === id ? "bg-primary/15 text-primary" : "text-muted-foreground"}`}><Icon className="size-5" />{label}</button>)}</div></div></div>}
     <div className="pt-17 md:pl-[86px]">{children}</div>
   </main>;
@@ -290,6 +209,7 @@ function Dashboard({ navigate }: { navigate: (page: Page) => void }) {
   const resumePath = lessonPath(accountProgress?.lastVisitedPath);
   useEffect(() => {
     let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Clear the previous account name while fetching the new profile.
     setFirstName(null);
     if (userId && userId !== "guest") {
       getProfile({ token: getStoredToken() }).then(profile => {
@@ -310,7 +230,7 @@ function Dashboard({ navigate }: { navigate: (page: Page) => void }) {
     </div>
     <div className="mt-4 grid gap-4 lg:grid-cols-[1.8fr_.9fr]"><div className="space-y-4">
       <article className="glass rounded-2xl border-l-4 border-l-primary p-6"><p className="flex items-center gap-2 text-xs font-semibold tracking-[.14em] text-primary uppercase"><Sparkles className="size-4" /> Continue learning</p><div className="mt-5 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><h2 className="text-2xl font-semibold">{learningModules.find(module => resumePath.endsWith(`/${module.id}`))?.title || "Explore quantum lessons"}</h2><p className="mt-3 max-w-3xl leading-7 text-muted-foreground">Pick up your last lesson or choose a module from the learning path.</p></div><button onClick={() => router.push(resumePath)} className="rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground">Resume</button></div><Progress value={accountProgress?.modules[resumePath.split("/").at(-1) || ""]?.percent || 0} className="mt-6 bg-foreground/10[&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" /></article>
-      <article className="glass rounded-2xl p-6"><div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-xl font-semibold"><FolderOpen className="size-5 text-primary" /> Recent projects</h2><button onClick={() => soon("Project storage")} className="text-sm text-secondary">View all</button></div><div className="mt-5 space-y-3">{[["Bell State Demo", "2 qubits · edited 2 hours ago"], ["VQE Experiment", "4 qubits · edited yesterday"]].map(([t, m]) => <button key={t} onClick={() => navigate("lab")} className="flex w-full items-center gap-4 rounded-xl border border-border bg-white/[.025] p-4 text-left transition hover:border-primary/40 hover:bg-primary/5"><span className="grid size-11 place-items-center rounded-xl bg-secondary/10 text-secondary"><Atom className="size-5" /></span><span><strong className="block">{t}</strong><span className="text-sm text-muted-foreground">{m}</span></span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></button>)}</div></article>
+      <article className="glass rounded-2xl p-6"><div className="flex items-center justify-between"><h2 className="flex items-center gap-2 text-xl font-semibold"><FolderOpen className="size-5 text-primary" /> Recent projects</h2><button onClick={() => navigate("projects")} className="text-sm text-secondary">View all</button></div><div className="mt-5 space-y-3">{[["Bell State Demo", "2 qubits · edited 2 hours ago"], ["VQE Experiment", "4 qubits · edited yesterday"]].map(([t, m]) => <button key={t} onClick={() => navigate("lab")} className="flex w-full items-center gap-4 rounded-xl border border-border bg-white/[.025] p-4 text-left transition hover:border-primary/40 hover:bg-primary/5"><span className="grid size-11 place-items-center rounded-xl bg-secondary/10 text-secondary"><Atom className="size-5" /></span><span><strong className="block">{t}</strong><span className="text-sm text-muted-foreground">{m}</span></span><ChevronRight className="ml-auto size-4 text-muted-foreground" /></button>)}</div></article>
     </div><article className="glass rounded-2xl p-6"><h2 className="flex items-center gap-2 text-2xl font-semibold"><Wand2 className="size-5 text-secondary" /> Suggested path</h2><p className="mt-5 leading-7 text-muted-foreground">Based on your progress, Q-SQOOL recommends strengthening these concepts next.</p><div className="mt-7 space-y-7 border-l border-primary/30 pl-6">{[["Quantum Fourier Transform", "Ready · 2 hours"], ["Phase Estimation", "Requires QFT mastery"], ["Order Finding", "Final prerequisite"]].map(([a, b], i) => <div key={a} className="relative"><span className={`absolute -left-[31px] top-1 size-3 rounded-full border ${i === 0 ? "border-primary bg-primary shadow-[0_0_12px_#c6a7ff]" : "border-border bg-background"}`} /><p className={i ? "text-muted-foreground" : "font-semibold text-primary"}>{a}</p><p className="mt-1 text-sm text-muted-foreground">{b}</p>{i === 0 && <button onClick={() => navigate("learning")} className="mt-3 rounded-lg border border-primary/35 px-3 py-2 text-sm">Start module</button>}</div>)}</div><button onClick={() => soon("Personalised learning")} className="mt-9 flex items-center gap-2 text-sm text-secondary"><Settings className="size-4" />Customise path</button></article></div>
   </div>;
 }
@@ -326,6 +246,7 @@ function Learning({ openLesson, tryModule }: { openLesson: (id: string) => void;
   useEffect(() => {
     if (!scope) return;
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate account-scoped browser preferences after mount.
       setRole(localStorage.getItem(`q-sqool-learning-role:${scope}`) || "Student");
       const assessment = JSON.parse(localStorage.getItem(`q-sqool-assessment:${scope}`) || "null");
       setAssessed(!!assessment); setAssessmentScore(assessment?.score || 0);
@@ -344,7 +265,7 @@ function Learning({ openLesson, tryModule }: { openLesson: (id: string) => void;
   const unlocked = (module: LearningModule) => module.prereqs.every(id => (progress[id] ?? 0) >= 60), recommended = assessed && assessmentScore < 2 ? ["qubits", "superposition", "measurement"] : role === "Student" ? ["measurement", "gates", "entanglement"] : role === "Researcher" ? ["qft", "vqe-qaoa", "teleportation"] : ["circuits", "grover", "vqe-qaoa"];
   return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8"><div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-sm font-semibold uppercase tracking-[.16em] text-secondary">Personalised curriculum</p><h1 className="glow-text mt-2 text-4xl font-bold sm:text-5xl">Quantum Learning Hub</h1><p className="mt-3 max-w-2xl text-muted-foreground">Concept-first lessons that connect mathematical meaning to circuits you can build and inspect.</p></div><label className="glass flex min-w-[280px] items-center gap-3 rounded-xl px-4 py-3"><Search className="size-4 text-muted-foreground" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search concepts..." className="w-full bg-transparent text-sm outline-none" /></label></div>
     <SyncStatus />
-    <div className="mt-7 grid gap-4 xl:grid-cols-[1.15fr_.85fr]"><section className="glass rounded-2xl p-5"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose your learning role</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{[["Student", "Build strong foundations"], ["Researcher", "Prioritise theory and experiments"], ["Professional", "Focus on applications and workflows"]].map(([name, copy]) => <button key={name} onClick={() => chooseRole(name)} className={`role-card ${role === name ? "active" : ""}`}><strong>{name}</strong><span>{copy}</span></button>)}</div><div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4"><p className="text-sm font-semibold text-primary">Recommended for {role}</p><div className="mt-3 flex flex-wrap gap-2">{recommended.map(id => { const module = learningModules.find(m => m.id === id)!; return <button key={id} onClick={() => openLesson(id)} className="rounded-lg border border-border px-3 py-2 text-xs hover:border-secondary">{module.title}</button> })}</div></div></section><section className="glass rounded-2xl p-5"><div className="grid grid-cols-3 gap-3 text-center"><div><strong className="block text-2xl text-primary">{xp}</strong><span className="text-xs text-muted-foreground">XP</span></div><div><strong className="block text-2xl text-secondary">12</strong><span className="text-xs text-muted-foreground">Day streak</span></div><div><strong className="block text-2xl">{completed}</strong><span className="text-xs text-muted-foreground">Mastered</span></div></div><div className="mt-5 flex flex-wrap gap-2">{["First Circuit", "State Explorer", completed >= 3 ? "Foundation Builder" : "Next: Foundation Builder"].map((badge, i) => <span key={badge} className={`achievement ${i === 2 && completed < 3 ? "locked" : ""}`}>✦ {badge}</span>)}</div></section></div>
+    <div className="mt-7 grid gap-4 xl:grid-cols-[1.15fr_.85fr]"><section className="glass rounded-2xl p-5"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose your learning role</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{[["Student", "Build strong foundations"], ["Researcher", "Prioritise theory and experiments"], ["Professional", "Focus on applications and workflows"]].map(([name, copy]) => <button key={name} onClick={() => chooseRole(name)} className={`role-card ${role === name ? "active" : ""}`}><strong>{name}</strong><span>{copy}</span></button>)}</div><div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 p-4"><p className="text-sm font-semibold text-primary">Recommended for {role}</p><div className="mt-3 flex flex-wrap gap-2">{recommended.map(id => { const recommendedModule = learningModules.find(m => m.id === id)!; return <button key={id} onClick={() => openLesson(id)} className="rounded-lg border border-border px-3 py-2 text-xs hover:border-secondary">{recommendedModule.title}</button> })}</div></div></section><section className="glass rounded-2xl p-5"><div className="grid grid-cols-3 gap-3 text-center"><div><strong className="block text-2xl text-primary">{xp}</strong><span className="text-xs text-muted-foreground">XP</span></div><div><strong className="block text-2xl text-secondary">12</strong><span className="text-xs text-muted-foreground">Day streak</span></div><div><strong className="block text-2xl">{completed}</strong><span className="text-xs text-muted-foreground">Mastered</span></div></div><div className="mt-5 flex flex-wrap gap-2">{["First Circuit", "State Explorer", completed >= 3 ? "Foundation Builder" : "Next: Foundation Builder"].map((badge, i) => <span key={badge} className={`achievement ${i === 2 && completed < 3 ? "locked" : ""}`}>✦ {badge}</span>)}</div></section></div>
     <section className="glass mt-4 rounded-2xl p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">Beginner skill assessment</h2><p className="mt-1 text-sm text-muted-foreground">Three quick checks tune your suggested starting point.</p></div>{assessed && <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">Completed · {assessmentScore}/3</span>}</div>{!assessed && <div className="mt-5 grid gap-4 lg:grid-cols-3">{assessment.map((item, i) => <div key={item.q} className="rounded-xl border border-border p-4"><p className="min-h-12 text-sm font-medium">{i + 1}. {item.q}</p><div className="mt-3 space-y-2">{item.options.map((option, j) => <button key={option} onClick={() => setAnswers(current => { const next = [...current]; next[i] = j; return next; })} className={`block w-full rounded-lg border p-2 text-left text-xs ${answers[i] === j ? "border-secondary bg-secondary/10" : "border-border"}`}>{option}</button>)}</div></div>)}<button disabled={answers.filter(a => a !== undefined).length < 3} onClick={finishAssessment} className="rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground disabled:opacity-40 lg:col-span-3">Finish assessment</button></div>}</section>
     <div className="mt-8 flex items-center gap-3"><Layers className="size-5 text-primary" /><h2 className="text-2xl font-semibold">Learning path</h2><span className="text-sm text-muted-foreground">{visible.length} modules</span></div><div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visible.map(module => { const available = unlocked(module), value = progress[module.id] ?? 0; return <article key={module.id} className={`glass learning-card ${available ? "" : "locked"}`}><div className="flex items-center justify-between"><span className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">{module.category}</span>{available ? <span className="text-xs text-secondary">{module.difficulty}</span> : <Lock className="size-4 text-muted-foreground" />}</div><h3 className="mt-5 text-xl font-semibold">{module.title}</h3><p className="mt-3 min-h-18 text-sm leading-6 text-muted-foreground">{module.summary}</p><div className="mt-4 flex justify-between text-xs text-muted-foreground"><span>{module.minutes} min</span><span>{value}%</span></div><Progress value={value} className="mt-2 bg-foreground/10[&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-secondary" /><p className="mt-3 min-h-8 text-xs text-muted-foreground">{module.prereqs.length ? `Prerequisites: ${module.prereqs.map(id => learningModules.find(m => m.id === id)?.title).join(", ")}` : "No prerequisites"}</p><div className="mt-4 grid grid-cols-2 gap-2"><button disabled={!available} onClick={() => openLesson(module.id)} className="rounded-lg border border-primary/35 p-2 text-sm text-primary disabled:opacity-35">Open lesson</button><button disabled={!available} onClick={() => tryModule(module.id)} className="rounded-lg border border-secondary/35 p-2 text-sm text-secondary disabled:opacity-35">Try in Composer</button></div></article> })}</div>
     <div className="mt-9 flex items-center gap-3"><Zap className="size-5 text-secondary" /><h2 className="text-2xl font-semibold">Algorithm laboratory</h2></div><div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{learningModules.filter(m => m.category !== "Foundation").map(module => <article key={module.id} className="algorithm-card"><p className="text-xs uppercase tracking-wider text-secondary">{module.category} · {module.difficulty}</p><h3 className="mt-3 text-lg font-semibold">{module.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{module.why}</p><div className="mt-4 flex gap-2"><button onClick={() => openLesson(module.id)} className="flex-1 rounded-lg border border-border p-2 text-xs">Learn</button><button onClick={() => tryModule(module.id)} className="flex-1 rounded-lg bg-secondary p-2 text-xs font-semibold text-secondary-foreground">Try in Composer</button></div></article>)}</div></div>;
@@ -378,6 +299,7 @@ function AICopilot({ circuit, onApply, onHighlight }: { circuit: Circuit; onAppl
   const request = useRef<AbortController | null>(null);
   useEffect(() => {
     request.current?.abort(); request.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Invalidate results when the circuit or analysis settings change.
     setBusy(false); setAnalysis(undefined); setStream(""); setPreview(false); setError("");
     onHighlight([]);
     return () => { request.current?.abort(); request.current = null; };
@@ -428,6 +350,7 @@ function SimulationPanel({ circuit, onHighlight }: { circuit: Circuit; onHighlig
   const request = useRef<AbortController | null>(null);
   useEffect(() => {
     request.current?.abort(); request.current = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Invalidate simulation results when its inputs change.
     setStatus("initial"); setResult(undefined); setError("");
     return () => { request.current?.abort(); request.current = null; };
   }, [circuit, shots, simulator, noise]);
@@ -518,50 +441,59 @@ function SimulationPanel({ circuit, onHighlight }: { circuit: Circuit; onHighlig
       <div className="grid gap-5 p-5 lg:grid-cols-[.8fr_1.2fr]">
         <div>
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-            <label className="text-xs text-muted-foreground">
-              Simulator
-
-              <select
+            <div className="min-w-0 text-xs text-muted-foreground">
+              <label htmlFor="execution-simulator">Simulator</label>
+              <Select
                 value={simulator}
-                onChange={(event) => setSimulator(event.target.value)}
+                onValueChange={setSimulator}
                 disabled={status === "queued" || status === "running"}
-                className="inspector-input"
               >
-                <option>Qiskit Aer</option>
-                <option disabled>Cirq — coming soon</option>
-                <option disabled>Additional simulators — coming soon</option>
-              </select>
-            </label>
+                <SelectTrigger id="execution-simulator" className="mt-2 h-11 w-full rounded-xl bg-background text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value="Qiskit Aer">Qiskit Aer</SelectItem>
+                  <SelectItem value="Cirq" disabled>Cirq — coming soon</SelectItem>
+                  <SelectItem value="additional" disabled>Additional simulators — coming soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label className="text-xs text-muted-foreground">
-              Number of shots
-
-              <select
-                value={shots}
-                onChange={(event) => setShots(Number(event.target.value))}
+            <div className="min-w-0 text-xs text-muted-foreground">
+              <label htmlFor="execution-shots">Number of shots</label>
+              <Select
+                value={String(shots)}
+                onValueChange={(value) => setShots(Number(value))}
                 disabled={status === "queued" || status === "running"}
-                className="inspector-input"
               >
-                {[128, 512, 1024, 2048, 4096].map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+                <SelectTrigger id="execution-shots" className="mt-2 h-11 w-full rounded-xl bg-background text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  {[128, 512, 1024, 2048, 4096].map((value) => (
+                    <SelectItem key={value} value={String(value)}>{value}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label className="text-xs text-muted-foreground">
-              Noise model
-
-              <select
+            <div className="min-w-0 text-xs text-muted-foreground">
+              <label htmlFor="execution-noise">Noise model</label>
+              <Select
                 value={noise}
-                onChange={(event) => setNoise(event.target.value)}
+                onValueChange={setNoise}
                 disabled={status === "queued" || status === "running"}
-                className="inspector-input"
               >
-                <option>Ideal</option>
-                <option disabled>Bit-flip noise — coming soon</option>
-                <option disabled>Depolarising noise — coming soon</option>
-              </select>
-            </label>
+                <SelectTrigger id="execution-noise" className="mt-2 h-11 w-full rounded-xl bg-background text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value="Ideal">Ideal</SelectItem>
+                  <SelectItem value="bit-flip" disabled>Bit-flip noise — coming soon</SelectItem>
+                  <SelectItem value="depolarising" disabled>Depolarising noise — coming soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="mt-5 flex gap-2">
@@ -678,17 +610,17 @@ function Lab({ navigate, circuit, setCircuit }: { navigate: (page: Page) => void
   const selectedGate = circuit.gates.find(g => g.id === selectedId), depth = circuit.gates.length ? Math.max(...circuit.gates.map(g => g.column)) + 1 : 0, columns = Math.max(14, depth + 3);
   const commit = (next: Circuit) => { setPast(items => [...items.slice(-29), circuit]); setCircuit(next); setFuture([]); };
   const updateGate = (id: number, patch: Partial<CircuitGate>) => commit({ ...circuit, gates: circuit.gates.map(g => g.id === id ? { ...g, ...patch } : g) });
-  const placeGate = (qubit: number, column: number, type = selectedTool) => { const occupied = circuit.gates.find(g => g.qubit === qubit && g.column === column); if (occupied) { setSelectedId(occupied.id); return; } const controlled = type === "CX" || type === "CZ", target = controlled ? (qubit + 1 < circuit.qubits ? qubit + 1 : qubit - 1) : undefined; const gate: CircuitGate = { id: Date.now(), type, qubit, column, ...(controlled ? { target } : {}), ...(["RX", "RY", "RZ"].includes(type) ? { angle: Math.PI / 2 } : {}) }; commit({ ...circuit, gates: [...circuit.gates, gate] }); setSelectedId(gate.id); };
+  const placeGate = (qubit: number, column: number, type = selectedTool) => { const occupied = circuit.gates.find(g => g.qubit === qubit && g.column === column); if (occupied) { setSelectedId(occupied.id); return; } const controlled = type === "CX" || type === "CZ"; if (controlled && circuit.qubits < 2) { toast.error("Add a second qubit for a controlled gate."); return; } const target = controlled ? (qubit + 1 < circuit.qubits ? qubit + 1 : qubit - 1) : undefined; const gate: CircuitGate = { id: Math.max(0, ...circuit.gates.map(gate => gate.id)) + 1, type, qubit, column, ...(controlled ? { target } : {}), ...(["RX", "RY", "RZ"].includes(type) ? { angle: Math.PI / 2 } : {}) }; commit({ ...circuit, gates: [...circuit.gates, gate] }); setSelectedId(gate.id); };
   const deleteGate = (id = selectedId) => { if (id === null) return; commit({ ...circuit, gates: circuit.gates.filter(g => g.id !== id) }); setSelectedId(null); };
   const undo = () => { const previous = past.at(-1); if (!previous) return; setFuture(items => [circuit, ...items]); setCircuit(previous); setPast(items => items.slice(0, -1)); setSelectedId(null); };
   const redo = () => { const next = future[0]; if (!next) return; setPast(items => [...items, circuit]); setCircuit(next); setFuture(items => items.slice(1)); setSelectedId(null); };
-  const duplicate = () => { if (!selectedGate) return; const copy = { ...selectedGate, id: Date.now(), column: selectedGate.column + 1 }; commit({ ...circuit, gates: [...circuit.gates, copy] }); setSelectedId(copy.id); };
+  const duplicate = () => { if (!selectedGate) return; const copy = { ...selectedGate, id: Math.max(0, ...circuit.gates.map(gate => gate.id)) + 1, column: selectedGate.column + 1 }; commit({ ...circuit, gates: [...circuit.gates, copy] }); setSelectedId(copy.id); };
   const removeQubit = () => { if (circuit.qubits <= 1) return; const removed = circuit.qubits - 1; commit({ qubits: removed, gates: circuit.gates.filter(g => g.qubit !== removed && g.target !== removed) }); setSelectedId(null); };
-  useEffect(() => { const key = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") { event.preventDefault(); event.shiftKey ? redo() : undo(); } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") { event.preventDefault(); duplicate(); } else if ((event.key === "Delete" || event.key === "Backspace") && (event.target as HTMLElement).tagName !== "INPUT") deleteGate(); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); });
+  useEffect(() => { const key = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); } else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") { event.preventDefault(); duplicate(); } else if ((event.key === "Delete" || event.key === "Backspace") && (event.target as HTMLElement).tagName !== "INPUT") deleteGate(); }; window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key); });
   const drop = (event: React.DragEvent, qubit: number, column: number) => { event.preventDefault(); const id = Number(event.dataTransfer.getData("gate-id")); if (id) { const moving = circuit.gates.find(g => g.id === id); if (moving && !circuit.gates.some(g => g.id !== id && g.qubit === qubit && g.column === column)) updateGate(id, { qubit, column, target: moving.target === qubit ? (qubit + 1 < circuit.qubits ? qubit + 1 : qubit - 1) : moving.target }); } else placeGate(qubit, column, event.dataTransfer.getData("gate-type") as GateName || selectedTool); };
   const tone = (type: GateName) => gatePalette.find(g => g.name === type)?.tone;
   return <div className="page-enter min-h-[calc(100vh-68px)] p-3 sm:p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-bold">Q-SQOOL Lab</h1><span className="text-sm text-muted-foreground">Interactive Circuit Composer</span></div><div className="flex items-center gap-2"><button onClick={() => navigate("code")} className="rounded-xl border border-border px-3 py-2 text-sm"><Code2 className="mr-2 inline size-4" />Code</button><button onClick={() => navigate("projects")} className="grid size-10 place-items-center rounded-xl border border-border" aria-label="Save project"><Save className="size-4" /></button><button onClick={() => document.getElementById("simulation-workspace")?.scrollIntoView({ behavior: "smooth" })} className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"><Zap className="size-4" />Run</button></div></div>
-    <div className="grid gap-3 xl:grid-cols-[230px_minmax(0,1fr)_300px]"><aside className="glass rounded-2xl p-5"><p className="text-sm font-semibold">Gate library</p><p className="mt-1 text-xs text-muted-foreground">Click a gate then a slot, or drag it onto the timeline.</p><div className="mt-5 grid grid-cols-3 gap-2">{gatePalette.map(g => <button key={g.name} draggable onDragStart={e => e.dataTransfer.setData("gate-type", g.name)} onClick={() => setSelectedTool(g.name)} aria-pressed={selectedTool === g.name} className={`aspect-square rounded-xl border font-mono text-sm transition ${selectedTool === g.name ? "border-primary bg-primary/20" : "border-border bg-white/[.025] hover:border-primary/40"}`}>{g.name === "M" ? <Gauge className="mx-auto size-5" /> : g.name}</button>)}</div><div className="mt-6 flex gap-2"><button onClick={() => commit({ ...circuit, qubits: circuit.qubits + 1 })} className="flex-1 rounded-lg border border-border p-2 text-xs">+ Qubit</button><button onClick={removeQubit} disabled={circuit.qubits <= 1} className="flex-1 rounded-lg border border-border p-2 text-xs disabled:opacity-40">− Qubit</button></div><div className="mt-6 rounded-xl border border-secondary/20 bg-secondary/5 p-4 text-xs leading-5 text-muted-foreground"><span className="text-secondary">Selected tool:</span> {selectedTool}<br />Drag gates to reposition them.</div></aside>
+    <div className="grid gap-3 xl:grid-cols-[230px_minmax(0,1fr)_300px]"><aside className="glass rounded-2xl p-5"><p className="text-sm font-semibold">Gate library</p><p className="mt-1 text-xs text-muted-foreground">Click a gate then a slot, or drag it onto the timeline.</p><div className="mt-5 grid grid-cols-3 gap-2">{gatePalette.map(g => <button key={g.name} draggable onDragStart={e => e.dataTransfer.setData("gate-type", g.name)} onClick={() => setSelectedTool(g.name)} aria-pressed={selectedTool === g.name} className={`aspect-square rounded-xl border font-mono text-sm transition ${selectedTool === g.name ? "border-primary bg-primary/20" : "border-border bg-white/[.025] hover:border-primary/40"}`}>{g.name === "M" ? <Gauge className="mx-auto size-5" /> : g.name}</button>)}</div><div className="mt-6 flex gap-2"><button disabled={circuit.qubits >= 5} onClick={() => commit({ ...circuit, qubits: circuit.qubits + 1 })} className="flex-1 rounded-lg border border-border p-2 text-xs">+ Qubit</button><button onClick={removeQubit} disabled={circuit.qubits <= 1} className="flex-1 rounded-lg border border-border p-2 text-xs disabled:opacity-40">− Qubit</button></div><div className="mt-6 rounded-xl border border-secondary/20 bg-secondary/5 p-4 text-xs leading-5 text-muted-foreground"><span className="text-secondary">Selected tool:</span> {selectedTool}<br />Drag gates to reposition them.</div></aside>
       <section className="glass min-h-[620px] overflow-hidden rounded-2xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><div className="flex flex-wrap gap-4 text-sm"><span className="font-semibold text-primary">Circuit canvas</span><span>{circuit.qubits} qubits</span><span>{circuit.gates.length} gates</span><span>Depth {depth}</span></div><div className="flex items-center gap-3 text-muted-foreground"><button aria-label="Undo" disabled={!past.length} onClick={undo} className="disabled:opacity-30"><Undo2 className="size-4" /></button><button aria-label="Redo" disabled={!future.length} onClick={redo} className="disabled:opacity-30"><Redo2 className="size-4" /></button><button onClick={() => { if (circuit.gates.length) commit({ ...circuit, gates: [] }); setSelectedId(null); }} className="text-xs hover: text-foreground">Clear</button></div></div><div className="composer-scroll overflow-x-auto p-5 sm:p-8"><div className="min-w-max space-y-6">{Array.from({ length: circuit.qubits }, (_, qubit) => <div key={qubit} className="grid grid-cols-[48px_auto] items-center"><span className="font-mono text-sm text-muted-foreground">q[{qubit}]</span><div className="relative grid" style={{ gridTemplateColumns: `repeat(${columns}, 56px)` }}>{Array.from({ length: columns }, (_, column) => { const gate = circuit.gates.find(g => g.qubit === qubit && g.column === column); return <div key={column} onDragOver={e => e.preventDefault()} onDrop={e => drop(e, qubit, column)} className="circuit-slot">{gate ? <button draggable onDragStart={e => e.dataTransfer.setData("gate-id", String(gate.id))} onClick={() => setSelectedId(gate.id)} aria-label={`${gate.type} gate on qubit ${qubit}, column ${column + 1}`} className={`circuit-gate tone-${tone(gate.type)} ${selectedId === gate.id ? "selected" : ""} ${highlightedIds.includes(gate.id) ? "ai-highlight" : ""}`}>{gate.type}{gate.angle !== undefined && <small>{(gate.angle / Math.PI).toFixed(2)}π</small>}</button> : <button onClick={() => placeGate(qubit, column)} aria-label={`Place ${selectedTool} on qubit ${qubit}, column ${column + 1}`} className="slot-button"><Plus className="size-3" /></button>}{circuit.gates.some(g => g.target === qubit && g.column === column) && <span className="target-dot" aria-hidden="true" />}</div>; })}</div></div>)}</div></div></section>
       <AICopilot circuit={circuit} onApply={commit} onHighlight={setHighlightedIds} /></div><SimulationPanel circuit={circuit} onHighlight={setHighlightedIds} />
   </div>;
@@ -706,29 +638,6 @@ function CodeLab({ circuit, setCircuit, navigate }: { circuit: Circuit; setCircu
   return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-sm font-semibold tracking-[.15em] text-secondary uppercase">Bidirectional workspace</p><h1 className="glow-text mt-2 text-4xl font-bold sm:text-5xl">Code Lab</h1><p className="mt-3 text-muted-foreground">Edit supported statements and the visual circuit updates immediately.</p></div><div className="flex flex-wrap gap-2">{(["Qiskit", "Cirq", "OpenQASM"] as SDK[]).map(name => <button key={name} onClick={() => selectSdk(name)} aria-pressed={sdk === name} className={`rounded-xl border px-4 py-2 text-sm ${sdk === name ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{name}</button>)}</div></div>
     <div className="mt-8 grid gap-4 xl:grid-cols-[1.15fr_.85fr]"><article className="glass overflow-hidden rounded-2xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4"><span className="flex items-center gap-2 text-sm"><Code2 className="size-4 text-secondary" /> q-sqool-circuit.{sdk === "OpenQASM" ? "qasm" : "py"}</span><div className="flex gap-2"><button onClick={copy} className="code-action"><Copy className="size-4" />Copy</button><button onClick={download} className="code-action"><Download className="size-4" />Download</button></div></div><div className="code-editor"><pre className="line-numbers" aria-hidden="true">{code.split("\n").map((_, i) => <span key={i}>{i + 1}</span>)}</pre><textarea value={code} onChange={e => edit(e.target.value)} spellCheck={false} aria-label={`${sdk} circuit code`} className="code-input" /></div><div className="border-t border-border p-4"><p className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Syntax-highlighted preview</p><pre className="highlighted-code">{code.split("\n").map((line, i) => <div key={i}>{highlightedLine(line) || " "}</div>)}</pre></div>{warning && <div role="alert" className="border-t border-amber-400/25 bg-amber-400/8 p-4 text-sm text-amber-200"><TriangleAlert className="mr-2 inline size-4" />{warning} Supported statements were still synchronised.</div>}</article>
       <article className="glass rounded-2xl p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">Visual synchronisation</h2><span className={`rounded-full border px-3 py-1 text-xs ${warning ? "border-amber-400/30 bg-amber-400/10 text-amber-200" : "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"}`}>{warning ? "Partially synced" : "In sync"}</span></div><div className="mt-10 space-y-10 overflow-x-auto pb-4">{Array.from({ length: circuit.qubits }, (_, q) => <div key={q} className="grid min-w-[420px] grid-cols-[42px_1fr] items-center gap-3"><span className="font-mono text-xs text-muted-foreground">q[{q}]</span><div className="circuit-wire">{circuit.gates.filter(g => g.qubit === q).map(g => <span key={g.id} style={{ left: `${8 + (g.column / Math.max(maxColumn, 1)) * 78}%` }} className={`mini-gate tone-${gatePalette.find(p => p.name === g.type)?.tone}`}>{g.type}</span>)}{circuit.gates.filter(g => g.target === q).map(g => <span key={g.id} style={{ left: `${8 + (g.column / Math.max(maxColumn, 1)) * 78}%` }} className="mini-target" />)}</div></div>)}</div><div className="mt-10 rounded-xl border border-border bg-foreground/5 p-4 text-sm text-muted-foreground"><p className="font-semibold  text-foreground">Shared circuit model</p><p className="mt-2">{circuit.qubits} qubits · {circuit.gates.length} gates · {sdk}</p></div><div className="mt-4 grid grid-cols-2 gap-2"><button onClick={refresh} className="rounded-xl border border-secondary/35 p-3 text-sm text-secondary">Generate from visual</button><button onClick={() => navigate("lab")} className="rounded-xl bg-primary p-3 text-sm font-semibold text-primary-foreground">Open Composer</button></div></article></div></div>;
-}
-
-function ProjectsWorkspace({ circuit, setCircuit, navigate }: { circuit: Circuit; setCircuit: React.Dispatch<React.SetStateAction<Circuit>>; navigate: (page: Page) => void }) {
-  const [projects, setProjects] = useState<LocalProject[]>([]), [name, setName] = useState("My quantum circuit"), [ready, setReady] = useState(false), [error, setError] = useState(""), [online, setOnline] = useState(true), [history, setHistory] = useState<LocalProject | null>(null), [collab, setCollab] = useState<{ project: LocalProject; view: "Share" | "Comments" | "Collaborators" } | null>(null), fileRef = useRef<HTMLInputElement>(null);
-  const load = () => { try { setProjects(JSON.parse(localStorage.getItem("q-sqool-projects") ?? "[]")); setError("") } catch { setError("Local project data could not be read.") } finally { setReady(true) } };
-  useEffect(() => { load(); setOnline(navigator.onLine); const update = () => setOnline(navigator.onLine); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update) } }, []);
-  const store = (next: LocalProject[]) => { try { setProjects(next); localStorage.setItem("q-sqool-projects", JSON.stringify(next)); setError("") } catch { setError("This browser could not save the project locally.") } };
-  const snapshot = (value: Circuit): ProjectVersion => ({ id: Date.now(), savedAt: new Date().toISOString(), circuit: value });
-  const create = () => { const trimmed = name.trim() || "Untitled circuit", now = new Date().toISOString(); store([{ id: Date.now(), name: trimmed, updatedAt: now, circuit, versions: [snapshot(circuit)] }, ...projects]); setName("My quantum circuit"); toast.success("Project saved locally") };
-  const save = (project: LocalProject) => { const now = new Date().toISOString(), next = { ...project, updatedAt: now, circuit, versions: [snapshot(circuit), ...project.versions].slice(0, 10) }; store(projects.map(item => item.id === project.id ? next : item)); toast.success("New local version saved") };
-  const rename = (project: LocalProject) => { const next = window.prompt("Rename project", project.name)?.trim(); if (next) store(projects.map(item => item.id === project.id ? { ...item, name: next, updatedAt: new Date().toISOString() } : item)) };
-  const duplicate = (project: LocalProject, label = "Copy") => { const now = new Date().toISOString(), copy = { ...project, id: Date.now(), name: `${project.name} (${label})`, updatedAt: now, versions: [snapshot(project.circuit)] }; store([copy, ...projects]); toast.success(`${label} created locally`) };
-  const download = (content: string, filename: string) => { const url = URL.createObjectURL(new Blob([content], { type: "text/plain" })), link = document.createElement("a"); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url) };
-  const exportProject = (project: LocalProject, format: "JSON" | SDK) => { if (format === "JSON") download(JSON.stringify({ name: project.name, circuit: project.circuit }, null, 2), `${project.name}.json`); else download(generateCode(project.circuit, format), `${project.name}.${format === "OpenQASM" ? "qasm" : "py"}`) };
-  const importJson = async (event: React.ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (!file) return; try { const data = JSON.parse(await file.text()), imported = (data.circuit ?? data) as Circuit; if (!Number.isInteger(imported.qubits) || !Array.isArray(imported.gates)) throw new Error(); const now = new Date().toISOString(), project: LocalProject = { id: Date.now(), name: data.name || file.name.replace(/\.json$/i, ""), updatedAt: now, circuit: imported, versions: [snapshot(imported)] }; store([project, ...projects]); setCircuit(imported); toast.success("Circuit JSON imported") } catch { setError("Import failed. Choose a valid Q-SQOOL circuit JSON file.") } finally { event.target.value = "" } };
-  const open = (project: LocalProject) => { setCircuit(project.circuit); navigate("lab") };
-  return <div className="page-enter mx-auto max-w-[1500px] p-5 sm:p-8"><div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><p className="text-sm font-semibold uppercase tracking-[.16em] text-secondary">Browser-local workspace</p><h1 className="glow-text mt-2 text-4xl font-bold sm:text-5xl">Projects</h1><p className="mt-3 max-w-2xl text-muted-foreground">Save circuits and versions on this device, or move them through portable JSON and SDK exports.</p></div><div className="flex flex-wrap gap-2"><input ref={fileRef} type="file" accept="application/json,.json" onChange={importJson} className="sr-only" /><button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-secondary/45 px-4 py-3 text-sm text-secondary"><Upload className="size-4" />Import JSON</button><button onClick={() => soon("Cloud project sync")} className="flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground"><Users className="size-4" />Cloud sync</button></div></div>
-    <section className="glass mt-8 rounded-2xl p-5"><div className="grid gap-3 sm:grid-cols-[1fr_auto]"><label className="text-xs text-muted-foreground">Project name<input value={name} onChange={e => setName(e.target.value)} className="inspector-input" /></label><button onClick={create} className="flex items-center justify-center gap-2 self-end rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"><Plus className="size-4" />Save current circuit</button></div><p className="mt-3 text-xs text-muted-foreground">Current circuit: {circuit.qubits} qubits · {circuit.gates.length} gates. Data remains in this browser until exported.</p></section>
-    {!online && <div role="status" className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">Offline mode: local projects remain available, while account and collaboration services are disabled.</div>}{error && <div role="alert" className="mt-4 flex items-center gap-3 rounded-xl border border-rose-400/30 bg-rose-400/10 p-4 text-sm text-rose-200"><TriangleAlert className="size-4" />{error}<button onClick={load} className="ml-auto underline">Retry</button></div>}
-    {!ready ? <div className="empty-state mt-8"><Clock className="size-6 animate-pulse text-secondary" /><p>Loading local projects…</p></div> : !projects.length ? <div className="empty-state glass mt-8 rounded-2xl p-10"><FolderOpen className="size-8 text-primary" /><h2 className="text-xl font-semibold">No saved projects yet</h2><p>Save the current circuit above or import a JSON file to begin.</p></div> : <div className="mt-8 grid gap-4 lg:grid-cols-2">{projects.map(project => { const max = Math.max(1, ...project.circuit.gates.map(g => g.column)); return <article key={project.id} className="glass rounded-2xl p-5"><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-semibold">{project.name}</h2><p className="mt-1 text-xs text-muted-foreground">Updated {new Date(project.updatedAt).toLocaleString()} · {project.versions.length} version{project.versions.length === 1 ? "" : "s"}</p></div><button onClick={() => rename(project)} className="rounded-lg border border-border px-3 py-1.5 text-xs">Rename</button></div><div className="mt-5 space-y-5 overflow-x-auto rounded-xl border border-border bg-foreground/5 p-4">{Array.from({ length: project.circuit.qubits }, (_, q) => <div key={q} className="grid min-w-[330px] grid-cols-[34px_1fr] items-center gap-2"><span className="font-mono text-xs text-muted-foreground">q{q}</span><div className="circuit-wire">{project.circuit.gates.filter(g => g.qubit === q).map(g => <span key={g.id} style={{ left: `${5 + (g.column / max) * 85}%` }} className={`mini-gate tone-${gatePalette.find(p => p.name === g.type)?.tone}`}>{g.type}</span>)}</div></div>)}</div><div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><button onClick={() => open(project)} className="rounded-lg bg-primary p-2 text-xs font-semibold text-primary-foreground">Open</button><button onClick={() => save(project)} className="rounded-lg border border-primary/40 p-2 text-xs text-primary">Save version</button><button onClick={() => duplicate(project)} className="rounded-lg border border-border p-2 text-xs">Duplicate</button><button onClick={() => setHistory(project)} className="rounded-lg border border-border p-2 text-xs">History</button></div><div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">{(["JSON", "Qiskit", "Cirq", "OpenQASM"] as const).map(format => <button key={format} onClick={() => exportProject(project, format)} className="code-action justify-center"><Download className="size-3" />{format}</button>)}<button onClick={() => duplicate(project, "Fork")} className="code-action justify-center">Fork</button></div><div className="mt-2 grid grid-cols-3 gap-2"><button onClick={() => setCollab({ project, view: "Share" })} className="rounded-lg border border-border p-2 text-xs">Share</button><button onClick={() => setCollab({ project, view: "Comments" })} className="rounded-lg border border-border p-2 text-xs">Comments</button><button onClick={() => setCollab({ project, view: "Collaborators" })} className="rounded-lg border border-border p-2 text-xs">Avatars</button></div></article> })}</div>}
-    {history && <div role="dialog" aria-modal="true" aria-labelledby="history-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4" onMouseDown={() => setHistory(null)}><section className="glass max-h-[80vh] w-full max-w-xl overflow-y-auto rounded-2xl p-6" onMouseDown={e => e.stopPropagation()}><div className="flex items-center justify-between"><h2 id="history-title" className="text-xl font-semibold">{history.name} versions</h2><button onClick={() => setHistory(null)} aria-label="Close version history"><X /></button></div><div className="mt-5 space-y-3">{history.versions.map((version, i) => <div key={version.id} className="flex items-center justify-between rounded-xl border border-border p-4"><div><p className="font-semibold">Version {history.versions.length - i}</p><p className="mt-1 text-xs text-muted-foreground">{new Date(version.savedAt).toLocaleString()} · {version.circuit.gates.length} gates</p></div><button onClick={() => { setCircuit(version.circuit); setHistory(null); navigate("lab") }} className="rounded-lg border border-secondary/40 px-3 py-2 text-xs text-secondary">Preview in Composer</button></div>)}</div></section></div>}
-    {collab && <div role="dialog" aria-modal="true" aria-labelledby="collab-title" className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4" onMouseDown={() => setCollab(null)}><section className="glass w-full max-w-lg rounded-2xl p-6" onMouseDown={e => e.stopPropagation()}><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-wider text-secondary">{collab.project.name}</p><h2 id="collab-title" className="mt-1 text-xl font-semibold">{collab.view}</h2></div><button onClick={() => setCollab(null)} aria-label="Close collaboration panel"><X /></button></div>{collab.view === "Share" ? <div className="mt-6"><label className="text-xs text-muted-foreground">Invite by email<input disabled placeholder="Requires an account connection" className="inspector-input" /></label><button onClick={() => soon("Project sharing")} disabled={!online} className="mt-4 w-full rounded-xl bg-primary p-3 font-semibold text-primary-foreground disabled:opacity-35">Connect and share</button></div> : collab.view === "Comments" ? <div className="mt-6"><div className="empty-state rounded-xl border border-border p-7"><Send className="size-6 text-secondary" /><p>No comments are stored locally. Real comments require authenticated project storage.</p></div><button onClick={() => soon("Comments")} disabled={!online} className="mt-4 w-full rounded-xl border border-secondary/40 p-3 text-secondary disabled:opacity-35">Connect comments</button></div> : <div className="mt-6"><div className="flex -space-x-2">{["P", "S", "+"].map(value => <span key={value} className="grid size-11 place-items-center rounded-full border-2 border-background bg-primary/20 font-semibold text-primary">{value}</span>)}</div><p className="mt-4 text-sm leading-6 text-muted-foreground">Avatar positions are a visual preview only. No collaborators are connected yet.</p><button onClick={() => soon("Collaborators")} disabled={!online} className="mt-4 w-full rounded-xl border border-secondary/40 p-3 text-secondary disabled:opacity-35">Manage collaborators</button></div>}</section></div>}
-  </div>;
 }
 
 function RouteOverview({ page, openLesson, tryModule, navigate }: { page: "algorithms" | "projects" | "challenges" | "profile"; openLesson: (id: string) => void; tryModule: (id: string) => void; navigate: (page: Page) => void }) {
@@ -776,6 +685,7 @@ export default function HomePage() {
       const savedCircuit = localStorage.getItem("q-sqool-circuit");
 
       if (savedCircuit) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Hydrate the saved browser circuit after server rendering.
         setCircuit(JSON.parse(savedCircuit) as Circuit);
       }
     } catch {
@@ -866,6 +776,7 @@ export default function HomePage() {
         />
       ) : page === "projects" ? (
         <ProjectsWorkspace
+          generateCode={generateCode}
           circuit={circuit}
           setCircuit={setCircuit}
           navigate={navigate}

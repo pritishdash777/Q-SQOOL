@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 interface SaveCircuitParams {
   userId: string;
   title: string;
-  state: any; // visual circuit grid state
+  state: unknown; // visual circuit grid state
   qiskitCode: string;
   circuitId?: string;
   isPublic?: boolean;

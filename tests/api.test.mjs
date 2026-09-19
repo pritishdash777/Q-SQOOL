@@ -43,3 +43,27 @@ test('timeouts and cancellation include reading the response body', async () => 
   await Promise.resolve(); controller.abort();
   await assert.rejects(pending, error => error.name === 'AbortError');
 });
+
+test('project and collaborator helpers preserve authorization, payloads and empty deletion responses', async () => {
+  const { createProject, updateProject, deleteProject, addCollaborator, getCollaborators, removeCollaborator } = await import('../lib/auth-api.ts');
+  storage.set('q-sqool-access-token', 'projects-token');
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    return options.method === 'DELETE' ? new Response(null, { status: 204 }) : new Response(JSON.stringify({ id: 'project-1' }));
+  };
+  const circuit = { qubits: 1, gates: [] };
+  await createProject('Example', circuit);
+  await updateProject('project-1', { name: 'Renamed', circuit_json: circuit });
+  await addCollaborator('project-1', 'user@example.com', 'view');
+  await getCollaborators('project-1');
+  assert.equal(await removeCollaborator('project-1', 42), undefined);
+  assert.equal(await deleteProject('project-1'), undefined);
+  assert.equal(calls.length, 6);
+  for (const call of calls) assert.equal(call.options.headers.Authorization, 'Bearer projects-token');
+  assert.deepEqual(JSON.parse(calls[1].options.body), { name: 'Renamed', circuit_json: circuit });
+  assert.deepEqual(JSON.parse(calls[2].options.body), { email: 'user@example.com', permission: 'view' });
+  assert.ok(calls[4].url.endsWith('/api/projects/project-1/collaborators/42'));
+  globalThis.fetch = () => assert.fail('stale project mutation must not be sent');
+  await assert.rejects(deleteProject('project-1', { token: 'old-account' }), /session changed/);
+});

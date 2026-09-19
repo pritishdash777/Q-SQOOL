@@ -43,7 +43,20 @@ class SavedProject(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     user_id: str = Field(index=True, foreign_key="user.id")
     name: str
-    circuit_json: dict = Field(default={}, sa_column=Column(JSON))
+    circuit_json: dict = Field(default_factory=dict, sa_column=Column(JSON))
     sdk: str = Field(default="Qiskit")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProjectCollaborator(SQLModel, table=True):
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_collaborator"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    project_id: str = Field(index=True, foreign_key="savedproject.id")
+    user_id: str = Field(index=True, foreign_key="user.id")
+    permission: str = Field(default="edit")
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )

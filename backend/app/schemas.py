@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from typing import Optional, Literal
 from datetime import datetime
 
 class RegisterRequest(BaseModel):
@@ -75,13 +75,22 @@ class SavedProjectUpdate(BaseModel):
     circuit_json: Optional[dict] = None
     sdk: Optional[str] = None
 
+    @field_validator("name", "circuit_json", "sdk")
+    @classmethod
+    def reject_null(cls, value):
+        if value is None:
+            raise ValueError("Project fields cannot be null")
+        return value
+
 class SavedProjectResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     name: str
     circuit_json: dict
     sdk: str
     created_at: datetime
     updated_at: datetime
+    permission: Literal["owner", "edit", "view"] = "owner"
 
 from typing import Dict, List
 
@@ -101,3 +110,18 @@ class UserProgressSync(BaseModel):
     completedModules: int = 0
     modules: Dict[str, ModuleProgressSync]
     lastVisitedPath: Optional[str] = None
+
+
+class CollaboratorAddRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+    permission: str = Field(default="edit", pattern="^(view|edit)$")
+
+
+class CollaboratorResponse(BaseModel):
+    id: int
+    user_id: str
+    email: str
+    permission: str
+    created_at: datetime

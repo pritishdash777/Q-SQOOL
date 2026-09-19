@@ -61,11 +61,11 @@ export class ProgressSession {
     if (this.stopped) return;
     const current = this.state.progress;
     const now = new Date().toISOString();
-    const module = current.modules[moduleId];
+    const currentModule = current.modules[moduleId];
     const updated = normalizeProgress({ ...current, pendingSync: true, updatedAt: now,
       lastVisitedPath: path || current.lastVisitedPath,
       modules: { ...current.modules, [moduleId]: {
-        ...(module || { moduleId, completed: false, percent: 0, completedLessons: [] }), ...patch, updatedAt: now,
+        ...(currentModule || { moduleId, completed: false, percent: 0, completedLessons: [] }), ...patch, updatedAt: now,
       } },
     });
     this.revision++;

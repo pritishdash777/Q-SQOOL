@@ -1,5 +1,6 @@
 import type { AuthResponse, UserProfile, LearningProgress, CloudProject, AuthUser } from "./auth-types";
 import type { UserProgress } from "./progress-types";
+import type { Circuit } from "./quantum-types";
 import { ApiError, requestJSON } from "./api";
 export { ApiError } from "./api";
 
@@ -126,20 +127,61 @@ export async function updateModuleProgress(
   });
 }
 
-export async function createProject(name: string, circuit_json: any, sdk: string = "Qiskit"): Promise<CloudProject> {
+export async function createProject(name: string, circuit_json: Circuit, sdk: string = "Qiskit", options: AuthRequest = {}): Promise<CloudProject> {
   return fetchWithAuth("/api/projects", {
+    ...options,
     method: "POST",
     body: JSON.stringify({ name, circuit_json, sdk }),
   });
 }
 
-export async function updateProject(id: string, updates: Partial<CloudProject>): Promise<CloudProject> {
+export async function updateProject(id: string, updates: Partial<Pick<CloudProject, "name" | "circuit_json" | "sdk">>, options: AuthRequest = {}): Promise<CloudProject> {
   return fetchWithAuth(`/api/projects/${id}`, {
+    ...options,
     method: "PATCH",
     body: JSON.stringify(updates),
   });
 }
 
-export async function deleteProject(id: string): Promise<void> {
-  await fetchWithAuth(`/api/projects/${id}`, { method: "DELETE" });
+export async function deleteProject(id: string, options: AuthRequest = {}): Promise<void> {
+  await fetchWithAuth(`/api/projects/${id}`, { ...options, method: "DELETE" });
+}
+
+export type Collaborator = {
+  id: number;
+  user_id: string;
+  email: string;
+  permission: "view" | "edit";
+  created_at: string;
+};
+
+export async function addCollaborator(
+  projectId: string,
+  email: string,
+  permission: "view" | "edit" = "edit",
+  options: AuthRequest = {}
+): Promise<Collaborator> {
+  return fetchWithAuth(`/api/projects/${projectId}/collaborators`, {
+    ...options,
+    method: "POST",
+    body: JSON.stringify({ email, permission }),
+  });
+}
+
+export async function getCollaborators(
+  projectId: string,
+  options: AuthRequest = {}
+): Promise<Collaborator[]> {
+  return fetchWithAuth(`/api/projects/${projectId}/collaborators`, options);
+}
+
+export async function removeCollaborator(
+  projectId: string,
+  collaboratorId: number,
+  options: AuthRequest = {}
+): Promise<void> {
+  await fetchWithAuth(
+    `/api/projects/${projectId}/collaborators/${collaboratorId}`,
+    { ...options, method: "DELETE" }
+  );
 }

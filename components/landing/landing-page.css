@@ -41,11 +41,9 @@
 .q-home .qh-brand { display: flex; align-items: center; gap: 9px; color: var(--qh-text); text-decoration: none; flex-shrink: 0; }
 .q-home .qh-brand > span { font-size: 19px; font-weight: 750; letter-spacing: -.04em; }
 .q-home .qh-brand small { display: block; margin-top: 4px; font: 8px/1.5 ui-monospace, monospace; letter-spacing: .11em; color: var(--qh-faint); }
-.q-home .qh-desktop-nav { display: flex; gap: 31px; margin-left: 35px; }
-.q-home .qh-desktop-nav a { position: relative; padding-block: 9px; font-size: 12px; color: var(--qh-muted); }
-.q-home .qh-desktop-nav a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 1px; background: var(--qh-purple); transform: scaleX(0); transform-origin: left; transition: transform .2s; }
-.q-home .qh-desktop-nav a:hover { color: var(--qh-text); }
-.q-home .qh-desktop-nav a:hover::after { transform: scaleX(1); }
+.q-home .qh-desktop-nav { display: flex; gap: 8px; margin-left: 35px; }
+.q-home .qh-desktop-nav a { display: inline-flex; align-items: center; min-height: 40px; padding: 9px 13px; border: 1px solid color-mix(in srgb, var(--qh-purple) 24%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--qh-purple) 9%, var(--qh-surface)); font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--qh-purple); }
+.q-home .qh-desktop-nav a:is(:hover, :focus-visible) { border-color: var(--qh-purple); background: color-mix(in srgb, var(--qh-purple) 17%, var(--qh-surface)); }
 .q-home .qh-nav-actions { display: flex; align-items: center; gap: 7px; }
 .q-home .qh-icon-button { display: grid; place-items: center; width: 36px; height: 38px; background: transparent; color: var(--qh-muted); border: 1px solid transparent; border-radius: 9px; }
 .q-home .qh-icon-button:hover { background: var(--qh-surface-soft); color: var(--qh-text); border-color: var(--qh-line); }
@@ -320,6 +318,8 @@
   .q-home .qh-mobile-nav { display: grid; margin-inline: 24px; padding: 10px 18px; border: 1px solid var(--qh-line); border-radius: 10px; background: var(--qh-surface); box-shadow: var(--qh-shadow); position: absolute; left: 0; right: 0; top: 74px; }
   .q-home .qh-mobile-nav a { display: flex; justify-content: space-between; padding: 16px 2px; color: var(--qh-text); font-size: 14px; border-bottom: 1px solid var(--qh-line); }
   .q-home .qh-mobile-nav a:last-child { border-bottom: 0; }
+  .q-home .qh-mobile-nav a[href^="#"] { margin-block: 5px; padding-inline: 12px; border: 1px solid color-mix(in srgb, var(--qh-purple) 24%, transparent); border-radius: 8px; background: color-mix(in srgb, var(--qh-purple) 9%, var(--qh-surface)); color: var(--qh-purple); font-weight: 600; }
+  .q-home .qh-mobile-nav a[href^="#"]:is(:hover, :focus-visible) { border-color: var(--qh-purple); background: color-mix(in srgb, var(--qh-purple) 17%, var(--qh-surface)); }
   .q-home .qh-nav-shell { min-height: 78px; }
   .q-home .qh-hero { grid-template-columns: 1fr; padding-top: 24px; gap: 28px; }
   .q-home .qh-hero-copy { text-align: center; padding-top: 0; }
