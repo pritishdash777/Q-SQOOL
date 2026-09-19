@@ -16,6 +16,7 @@ import { QuantumWavePlayback } from "@/components/quantum-playback/QuantumWavePl
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Page, GateName, CircuitGate, Circuit, SDK, RunState, DemoResult, ResultsTab, AIMode, AILevel, AIAnalysis } from "../lib/quantum-types";
 import { simulateCircuit, optimizeCircuit } from "../lib/api";
 
@@ -440,50 +441,59 @@ function SimulationPanel({ circuit, onHighlight }: { circuit: Circuit; onHighlig
       <div className="grid gap-5 p-5 lg:grid-cols-[.8fr_1.2fr]">
         <div>
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-            <label className="text-xs text-muted-foreground">
-              Simulator
-
-              <select
+            <div className="min-w-0 text-xs text-muted-foreground">
+              <label htmlFor="execution-simulator">Simulator</label>
+              <Select
                 value={simulator}
-                onChange={(event) => setSimulator(event.target.value)}
+                onValueChange={setSimulator}
                 disabled={status === "queued" || status === "running"}
-                className="inspector-input"
               >
-                <option>Qiskit Aer</option>
-                <option disabled>Cirq — coming soon</option>
-                <option disabled>Additional simulators — coming soon</option>
-              </select>
-            </label>
+                <SelectTrigger id="execution-simulator" className="mt-2 h-11 w-full rounded-xl bg-background text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value="Qiskit Aer">Qiskit Aer</SelectItem>
+                  <SelectItem value="Cirq" disabled>Cirq — coming soon</SelectItem>
+                  <SelectItem value="additional" disabled>Additional simulators — coming soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label className="text-xs text-muted-foreground">
-              Number of shots
-
-              <select
-                value={shots}
-                onChange={(event) => setShots(Number(event.target.value))}
+            <div className="min-w-0 text-xs text-muted-foreground">
+              <label htmlFor="execution-shots">Number of shots</label>
+              <Select
+                value={String(shots)}
+                onValueChange={(value) => setShots(Number(value))}
                 disabled={status === "queued" || status === "running"}
-                className="inspector-input"
               >
-                {[128, 512, 1024, 2048, 4096].map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+                <SelectTrigger id="execution-shots" className="mt-2 h-11 w-full rounded-xl bg-background text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  {[128, 512, 1024, 2048, 4096].map((value) => (
+                    <SelectItem key={value} value={String(value)}>{value}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-            <label className="text-xs text-muted-foreground">
-              Noise model
-
-              <select
+            <div className="min-w-0 text-xs text-muted-foreground">
+              <label htmlFor="execution-noise">Noise model</label>
+              <Select
                 value={noise}
-                onChange={(event) => setNoise(event.target.value)}
+                onValueChange={setNoise}
                 disabled={status === "queued" || status === "running"}
-                className="inspector-input"
               >
-                <option>Ideal</option>
-                <option disabled>Bit-flip noise — coming soon</option>
-                <option disabled>Depolarising noise — coming soon</option>
-              </select>
-            </label>
+                <SelectTrigger id="execution-noise" className="mt-2 h-11 w-full rounded-xl bg-background text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectItem value="Ideal">Ideal</SelectItem>
+                  <SelectItem value="bit-flip" disabled>Bit-flip noise — coming soon</SelectItem>
+                  <SelectItem value="depolarising" disabled>Depolarising noise — coming soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="mt-5 flex gap-2">
