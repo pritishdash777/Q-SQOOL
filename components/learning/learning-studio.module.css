@@ -1,0 +1,43 @@
+.studio, .coach { margin: 24px 0; padding: clamp(18px, 3vw, 30px); border: 1px solid var(--border); border-radius: 22px; background: linear-gradient(130deg, var(--accent), var(--card) 50%); color: var(--foreground); }
+.heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; flex-wrap: wrap; }
+.eyebrow { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: var(--secondary); margin-bottom: 9px; }
+.studio h2, .coach h2 { font-size: clamp(21px, 3vw, 29px); font-weight: 700; }
+.studio h3 { font-size: 18px; font-weight: 650; }
+.heading p:not(.eyebrow), .coach > p:not(.eyebrow), .goal { color: var(--muted-foreground); line-height: 1.7; margin: 8px 0 16px; font-size: 14px; }
+.badge { border: 1px solid var(--border); padding: 8px 12px; border-radius: 100px; font-size: 12px; color: var(--primary); }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+.studio button, .coach button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--foreground); font-size: 12px; cursor: pointer; }
+.studio button:hover, .coach button:hover { border-color: var(--primary); }
+.studio button:focus-visible, .coach button:focus-visible, .coach textarea:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.studio button:disabled, .coach button:disabled { opacity: .4; cursor: default; }
+.tabs button[aria-pressed=true] { color: var(--primary); background: var(--accent); border-color: var(--primary); }
+.columns { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 26px; }
+.tools, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0; }
+.tools label, .actions > span { color: var(--muted-foreground); font-size: 12px; }
+.tools select { background: var(--card); padding: 8px; margin-left: 6px; border: 1px solid var(--border); border-radius: 8px; }
+.circuit { overflow-x: auto; background: var(--background); border: 1px solid var(--border); border-radius: 14px; padding: 18px 12px; }
+.wire { display: flex; align-items: center; gap: 12px; min-width: max-content; margin: 10px 0; font-family: monospace; }
+.wire > div { display: flex; align-items: center; gap: 7px; }
+.wire small { color: var(--muted-foreground); padding: 6px; }
+.gate, .empty { display: grid; place-items: center; height: 36px; width: 36px; border-radius: 8px; }
+.gate { color: var(--primary); background: var(--accent); border: 1px solid var(--primary); }
+.studio .primary, .coach .primary { background: var(--primary); color: var(--primary-foreground); font-weight: 650; }
+.feedback { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 14px; border-radius: 12px; background: var(--accent); font-size: 13px; line-height: 1.6; margin: 12px 0; }
+.results { background: var(--background); padding: 20px; border-radius: 16px; border: 1px solid var(--border); }
+.results > p { font-size: 11px; line-height: 1.6; color: var(--muted-foreground); margin: 8px 0 14px; }
+.outcome { margin: 14px 0; }
+.outcome > div { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.outcome span { flex: 1; color: var(--muted-foreground); font-family: monospace; font-size: 10px; }
+.outcome meter { display: block; width: 100%; height: 14px; accent-color: var(--secondary); }
+.measure, .ai { width: 100%; }
+.studio .ai { color: var(--primary); }
+.coach label { display: block; font-size: 12px; font-weight: 600; margin: 15px 0 8px; }
+.coach textarea { width: 100%; background: var(--background); padding: 12px; border: 1px solid var(--border); border-radius: 12px; resize: vertical; font-size: 16px; }
+@media (max-width: 760px) { .columns { grid-template-columns: 1fr; } }
+.toggle { display: flex; gap: 9px; align-items: center; font-size: 13px; margin: 18px 0; }
+.toggle input { accent-color: var(--primary); }
+.prediction { padding: 14px; border: 1px solid var(--border); border-radius: 12px; font-size: 13px; margin-bottom: 18px; }
+.prediction small { color: var(--muted-foreground); }
+.prediction button[aria-pressed=true] { background: var(--primary); color: var(--primary-foreground); }
+.truthTable > div, .truthTable > button { display: grid; grid-template-columns: .5fr .5fr 1fr 1.4fr; width: 100%; gap: 8px; font-size: 11px; padding: 10px 6px; text-align: center; }
+.truthTable > button { margin: 5px 0; }

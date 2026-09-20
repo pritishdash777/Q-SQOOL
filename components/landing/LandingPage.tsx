@@ -128,7 +128,7 @@ export function LandingPage() {
           <span>Q-SQOOL<small>A SCHOOL OF POSSIBILITY</small></span>
         </Link>
         <nav className="qh-desktop-nav" aria-label="Landing navigation">
-          <a href="#experience">The experience</a><a href="#playground">Your playground</a><a href="#paths">Find your path</a>
+          <Link href="/learn">Start to learn</Link><a href="#experience">The experience</a><a href="#playground">Your playground</a><a href="#paths">Find your path</a>
         </nav>
         <div className="qh-nav-actions">
           <button type="button" className="qh-icon-button qh-motion-toggle" onClick={() => setPaused(value => !value)} disabled={reduced}
@@ -153,6 +153,7 @@ export function LandingPage() {
       }}>
         {[["The experience", "#experience"], ["Your playground", "#playground"], ["Find your path", "#paths"]].map(([label, href]) =>
           <a key={href} href={href} onClick={() => setMenuOpen(false)}>{label}<ArrowUpRight size={18} /></a>)}
+        <Link href="/learn" onClick={() => setMenuOpen(false)}>Start to learn <ArrowUpRight size={18} /></Link>
         <Link href="/login" onClick={() => setMenuOpen(false)}>Sign in <ArrowUpRight size={18} /></Link>
       </nav>}
     </header>
@@ -163,7 +164,8 @@ export function LandingPage() {
         <h1 id="qh-title"><span>Think quantum.</span><span>Build <em>beyond.</em></span></h1>
         <p className="qh-hero-description">The smallest things can change everything.<br className="qh-desktop-break" /> Learn quantum, build circuits, and turn<br className="qh-desktop-break" /> “what if” into your next discovery.</p>
         <div className="qh-hero-actions">
-          <Link href="/composer" className="qh-button qh-button-primary">Enter the Quantum Lab <ArrowUpRight size={19} /></Link>
+          <Link href="/learn" className="qh-button qh-button-primary">Start to learn <ArrowUpRight size={19} /></Link>
+          <Link href="/composer" className="qh-text-link">Open the Quantum Lab <ArrowRight size={17} /></Link>
           <a href="#playground" className="qh-text-link"><span className="qh-play-ring"><Play size={12} fill="currentColor" /></span> See it in action</a>
         </div>
         <p className="qh-guest-note"><span className="qh-check-dot"><Check size={10} /></span>No setup. No account needed to explore.</p>

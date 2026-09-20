@@ -2,6 +2,7 @@ import { learningModules, type LearningModule } from "./curriculum";
 
 export type TutorReply = {
   text: string;
+  experiment?: "xor";
   topic?: LearningModule;
   mode?: "steps" | "quiz";
   demo?: "gates" | "grover";
@@ -42,6 +43,7 @@ export function topicForPath(path: string) {
 
 export function getTutorReply(input: string, previousId?: string, path = ""): TutorReply {
   const query = normalize(input);
+  if (/\b(xor|exclusive or)\b/.test(query)) return { text: "Explore XOR by preparing two inputs and applying CNOT in the interactive lab.", experiment: "xor" };
   const mode = /\b(quiz|test me|challenge me)\b/.test(query) ? "quiz" : /\b(step|steps|walkthrough|walk me)\b/.test(query) ? "steps" : undefined;
   const gate = Object.keys(gateDetails).find(key => contains(query, `${key} gate`) || contains(query, `gate ${key}`) || query === key)
     ?? (contains(query, "hadamard") ? "h" : undefined);

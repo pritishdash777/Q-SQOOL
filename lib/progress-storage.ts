@@ -59,14 +59,20 @@ export function getLocalProgress(userId: string): UserProgress {
   if (typeof window === "undefined") return createEmptyProgress(userId);
   try {
     const parsed = JSON.parse(localStorage.getItem(`q-sqool-progress:v1:${userId}`) || "null");
-    if (parsed?.version === 1 && parsed.userId === userId) return normalizeProgress(parsed);
-    // The legacy shared cache has no account owner. Preserve it as guest data only.
-    if (userId === "guest") {
-      const legacy = JSON.parse(localStorage.getItem("q-sqool-learning") || "{}");
-      return remoteProgress(userId, Object.entries(legacy.progress || {}).map(([id, percent]) => ({
-        module_id: id, progress: Number(percent), completed: percent === 100,
-        quiz_score: null, completed_lessons: [], updated_at: "",
-      })));
+    // The old shared cache has no evidence of learning activity; never import it.
+    localStorage.removeItem?.("q-sqool-learning");
+    if (parsed?.version === 1 && parsed.userId === userId) {
+      if (userId === "guest") {
+        // Earlier versions imported legacy percentages with no activity timestamp.
+        const originalCount = Object.keys(parsed.modules || {}).length;
+        parsed.modules = Object.fromEntries(Object.entries(parsed.modules || {})
+          .filter(([, module]) => Boolean((module as ModuleProgress)?.updatedAt)));
+        if (Object.keys(parsed.modules).length !== originalCount) {
+          const clean = normalizeProgress(parsed);
+          localStorage.setItem(`q-sqool-progress:v1:${userId}`, JSON.stringify(clean));
+        }
+      }
+      return normalizeProgress(parsed);
     }
   } catch { /* Corrupt or unavailable cache: start in memory. */ }
   return createEmptyProgress(userId);

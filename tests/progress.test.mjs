@@ -132,11 +132,11 @@ test('duplicate completion and corrupt XP do not inflate rewards', () => {
   assert.equal(mergeProgress(progress, progress).completedModules, 1);
 });
 
-test('browser caches are scoped and legacy shared progress stays guest-only', () => {
+test('browser caches are scoped and unverified legacy progress is not imported', () => {
   globalThis.window = {};
   const storage = new Map([['q-sqool-learning', JSON.stringify({ progress: { qubits: 100 } })]]);
   globalThis.localStorage = { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) };
-  assert.equal(getLocalProgress('guest').xp, 100);
+  assert.equal(getLocalProgress('guest').xp, 0);
   assert.equal(getLocalProgress('A').xp, 0);
   assert.equal(saveLocalProgress('B', remoteProgress('A', [record('qubits')])), false);
   assert.equal(getLocalProgress('B').xp, 0);
@@ -147,4 +147,16 @@ test('resume and auth redirects accept existing local routes only', () => {
   for (const path of ['/learn/missing', '//evil.test', '/module-2/lesson-1']) assert.equal(lessonPath(path), '/learn');
   for (const path of ['//evil.test', '/\\evil.test', 'https://evil.test', '/login', '/learn/missing']) assert.equal(safeNextPath(path), '/dashboard');
   assert.equal(safeNextPath('/composer'), '/composer');
+});
+
+test('unverified imported guest completion is purged while recorded activity survives', () => {
+  globalThis.window = {};
+  const imported = remoteProgress('guest', [{ ...record('qubits'), updated_at: '' }, record('gates')]);
+  const storage = new Map([['q-sqool-progress:v1:guest', JSON.stringify(imported)]]);
+  globalThis.localStorage = { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) };
+  const clean = getLocalProgress('guest');
+  assert.equal(clean.modules.qubits, undefined);
+  assert.equal(clean.modules.gates.completed, true);
+  assert.equal(clean.xp, 100);
+  assert.equal(JSON.parse(storage.get('q-sqool-progress:v1:guest')).modules.qubits, undefined);
 });

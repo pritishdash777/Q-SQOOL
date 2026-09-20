@@ -27,3 +27,8 @@ test('unsupported questions do not pretend to be answered', () => {
   assert.equal(getTutorReply('What is the weather?', 'grover').topic, undefined);
   assert.match(getTutorReply('What is the weather?').text, /don’t have a guided explanation/);
 });
+
+test('XOR questions hand off to an interactive experiment', () => {
+  assert.equal(getTutorReply('How do I solve XOR with a quantum circuit?').experiment, 'xor');
+  assert.equal(getTutorReply('Explain exclusive OR').experiment, 'xor');
+});

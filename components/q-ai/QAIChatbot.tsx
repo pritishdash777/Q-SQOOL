@@ -7,6 +7,7 @@ import { Atom, ArrowUp, ChevronRight, RotateCcw, Sparkles, Square, LoaderCircle,
 import { applyTutorGate, getTutorReply, groverProbability, topicForPath, type TutorReply } from "@/lib/q-ai";
 import { requestChat, QUESTION_LIMIT, type ChatTurn } from "@/lib/q-ai-chat";
 import ChatText from "./ChatText";
+import { QAI_ASK_EVENT } from "@/lib/q-ai-actions";
 import styles from "./q-ai.module.css";
 
 type Message = { id: number; role: "user" | "assistant"; reply: TutorReply; truncated?: boolean };
@@ -34,17 +35,18 @@ function GroverLab() {
   return <div className={styles.activity}><strong>Find one item among four</strong><p>See how extra iterations can overshoot the answer.</p><label className={styles.range}>Grover iterations: {iterations}<input type="range" min="0" max="4" value={iterations} onChange={event => setIterations(Number(event.target.value))} /></label><Probability label="Success" value={groverProbability(iterations)} /><small>Ideal circuit · one marked item · four candidates</small></div>;
 }
 
-function ReplyCard({ reply }: { reply: TutorReply }) {
+function ReplyCard({ reply, onNavigate }: { reply: TutorReply; onNavigate: () => void }) {
   const [step, setStep] = useState(0);
   const [answer, setAnswer] = useState<number>();
   const topic = reply.topic;
   return <>
     <ChatText text={reply.text} />
+    {reply.experiment === "xor" && <div className={styles.activity}><strong>Try this as an experiment</strong><p>Choose a and b, predict the result, then step through a quantum XOR circuit.</p><Link className={styles.lessonLink} href="/experiments/xor" onClick={onNavigate}>Open the interactive XOR lab →</Link></div>}
     {reply.demo === "gates" && <GateLab />}
     {reply.demo === "grover" && <GroverLab />}
     {topic && reply.mode === "steps" && <div className={styles.activity}><small>{topic.title} · Step {step + 1} of {topic.steps.length}</small><p aria-live="polite">{topic.steps[step]}</p><div className={styles.actions}><button disabled={step === 0} onClick={() => setStep(step - 1)}>Back</button><button onClick={() => setStep((step + 1) % topic.steps.length)}>{step === topic.steps.length - 1 ? "Start again" : "Next step"}<ChevronRight size={14} /></button></div></div>}
     {topic && reply.mode === "quiz" && <div className={styles.activity}><strong>{topic.quiz.question}</strong><div className={styles.answers}>{topic.quiz.options.map((option, index) => <button key={option} aria-pressed={answer === index} onClick={() => setAnswer(index)}>{option}</button>)}</div>{answer !== undefined && <p role="status">{answer === topic.quiz.answer ? "✓ Exactly! " : "Not quite. "}{topic.quiz.explanation}</p>}</div>}
-    {topic && <Link className={styles.lessonLink} href={`/learn/${topic.id}`}>Explore the {topic.title} lesson <ChevronRight size={13} /></Link>}
+    {topic && <Link className={styles.lessonLink} href={`/learn/${topic.id}`} onClick={onNavigate}>Explore the {topic.title} lesson <ChevronRight size={13} /></Link>}
   </>;
 }
 
@@ -100,7 +102,7 @@ export default function QAIChatbot() {
       if (pending.current !== controller || controller.signal.aborted) return;
       // The model writes every answer. Local knowledge only selects optional experiments.
       const activity = getTutorReply(question, undefined, page);
-      const reply: TutorReply = { text: response.text, demo: activity.demo, topic: activity.topic };
+      const reply: TutorReply = { text: response.text, demo: activity.demo, topic: activity.topic, experiment: activity.experiment };
       const id = nextId.current++;
       setMessages(previous => [...previous, { id, role: "assistant" as const, reply, truncated: response.truncated }].slice(-40));
       setConnected(true); setConfigured(true); retry.current = null;
@@ -123,6 +125,19 @@ export default function QAIChatbot() {
     void answer(turns, question, pathname);
     inputRef.current?.focus();
   }
+  const sendRef = useRef(send);
+  useEffect(() => { sendRef.current = send; });
+  useEffect(() => {
+    const ask = (event: Event) => {
+      const question = (event as CustomEvent<unknown>).detail;
+      if (typeof question !== "string" || !question.trim()) return;
+      setOpen(true);
+      if (pending.current) setInput(question.slice(0, QUESTION_LIMIT));
+      else sendRef.current(question.slice(0, QUESTION_LIMIT));
+    };
+    window.addEventListener(QAI_ASK_EVENT, ask);
+    return () => window.removeEventListener(QAI_ASK_EVENT, ask);
+  }, []);
   const pageTopic = topicForPath(pathname);
   const suggestions = messages.length > 1 ? ["Explain simpler", "Step by step", "Quiz me", "Show the math"] : [pageTopic ? `Explain ${pageTopic.title}` : "Explain Shor’s algorithm", "Help me write Qiskit code", "Quantum error correction"];
   return <div className={styles.widget}>
@@ -131,7 +146,7 @@ export default function QAIChatbot() {
       <div className={styles.strip}><Sparkles size={13} /> Explore it. Try it. Understand it.</div>
       {configured === false && <div className={styles.notice} role="status">AI answers aren’t connected yet. The site owner needs to finish setup. You can still explore the gate lab below.</div>}
       <div ref={logRef} className={styles.messages} role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions">
-        {messages.map(message => <article key={message.id} className={`${styles.message} ${message.role === "user" ? styles.user : styles.assistant}`}><small className={styles.author}>{message.role === "user" ? "You" : "q-ai"}</small>{message.role === "user" ? <p className={styles.text}>{message.reply.text}</p> : <ReplyCard reply={message.reply} />}{message.truncated && <button className={styles.continue} disabled={busy} onClick={() => send("Continue from where your answer stopped.")}>Continue answer <ChevronRight size={13} /></button>}</article>)}
+        {messages.map(message => <article key={message.id} className={`${styles.message} ${message.role === "user" ? styles.user : styles.assistant}`}><small className={styles.author}>{message.role === "user" ? "You" : "q-ai"}</small>{message.role === "user" ? <p className={styles.text}>{message.reply.text}</p> : <ReplyCard reply={message.reply} onNavigate={close} />}{message.truncated && <button className={styles.continue} disabled={busy} onClick={() => send("Continue from where your answer stopped.")}>Continue answer <ChevronRight size={13} /></button>}</article>)}
         {busy && <p className={styles.thinking} role="status"><LoaderCircle size={15} /> q-ai is thinking…</p>}
         {error && <div className={styles.error} role="alert"><p>{error}</p><button disabled={busy} onClick={() => { const last = retry.current; if (last) void answer(last.turns, last.question, last.page); }}>Retry answer</button></div>}
         <details className={styles.lab}><summary>Open the interactive gate lab</summary><GateLab /></details>

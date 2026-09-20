@@ -119,7 +119,7 @@ PYTHONPATH=.:backend backend/.venv/bin/python -m pytest backend/tests -q
 
 Learning progress uses `q-sqool-progress:v1:<authenticated-user-id>`; guest progress
 uses the `guest` suffix. Legacy `q-sqool-learning` data has no account owner and is
-read only as guest progress. It is never automatically assigned to an account.
+discarded rather than imported, because it has no evidence of learning activity. Previously imported guest entries without timestamps are removed; recorded account progress is preserved.
 Offline account changes remain pending until the authenticated backend acknowledges
 them. XP is derived from completed curriculum modules (100 XP each), not submitted
 XP totals. The shared curriculum IDs/rewards are in `lib/learning-catalog.json`;
@@ -192,3 +192,26 @@ limits, not a distributed per-user quota; configure hosting-level rate limits
 and Groq project spend limits for a public multi-instance deployment. Neither
 credentials nor provider error bodies are returned to browsers. See Groq’s data
 policy for provider-side handling of messages.
+
+
+## Interactive learning and AI coaching
+
+The landing page’s **Start to learn** action opens `/learn`. Learners can build
+three circuits from scratch, inspect exact two-qubit amplitudes, measure fresh
+copies, undo gates, and check solutions against a target state including phase.
+The solved counter reflects only checks performed in the current session; it
+never creates lesson XP. Lessons and `/challenges` include AI explanation review,
+adaptive quizzes, analogies, and hints grounded in the learner’s actual circuit.
+AI buttons use the existing Groq endpoint and incur a request only when clicked.
+
+`/experiments/xor` teaches reversible XOR through input selection, prediction,
+input preparation, CNOT execution, and measurement. Students fill in the truth
+table through experiments and can switch to a superposed control. XOR questions
+in q-ai include a direct link to this lab. Composer AI coaching receives the
+current circuit instead of giving a generic answer.
+
+The old shared progress cache is discarded, imported guest entries with no
+activity timestamp are removed, and simulator status no longer displays invented
+percentages. `/playground` opens the account-aware Composer instead of using a
+hardcoded test identity. Existing real lessons, projects, and account records
+are retained. No demo progress is seeded; practice starts unsolved.
