@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import "../components/effects/quantum-background.css";
 import ClientWrapper from "@/components/progress/ClientWrapper";
 

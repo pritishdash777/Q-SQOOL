@@ -13,7 +13,22 @@
 .messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 15px 6px; scrollbar-width: thin; }
 .message { font-size: 13px; line-height: 1.65; margin-bottom: 17px; overflow-wrap: anywhere; }
 .author { font-size: 10px; color: var(--muted-foreground); font-weight: 600; display: block; margin-bottom: 5px; }
-.text { white-space: pre-line; margin: 0; }
+.text { overflow-wrap: anywhere; line-height: 1.6; }
+.text > :first-child { margin-top: 0; }
+.text > :last-child { margin-bottom: 0; }
+.text p { margin: 0 0 10px; }
+.text h1, .text h2, .text h3, .text h4 { font-size: 13px; font-weight: 700; line-height: 1.35; margin: 14px 0 6px; }
+.text ul, .text ol { padding-left: 19px; margin: 6px 0 10px; }
+.text li { margin: 3px 0; }
+.text li > p { margin: 0; }
+.text hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; }
+.text a { color: var(--primary); text-decoration: underline; }
+.text pre { white-space: pre; overflow-x: auto; background: var(--background); padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 9px; font-size: 11px; }
+.text :not(pre) > code { background: var(--accent); padding: 1px 4px; border-radius: 4px; }
+.text .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; font-size: .9em; }
+.text table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 8px 0; }
+.text th, .text td { border: 1px solid var(--border); padding: 4px 6px; }
+
 .user { background: var(--accent); padding: 10px 13px; border-radius: 14px 14px 3px 14px; margin-left: 38px; }
 .assistant { padding-right: 4px; }
 .activity { border: 1px solid var(--border); padding: 12px; border-radius: 13px; background: var(--muted); margin-top: 12px; }
