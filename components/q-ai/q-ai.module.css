@@ -25,7 +25,7 @@
 .text a { color: var(--primary); text-decoration: underline; }
 .text pre { white-space: pre; overflow-x: auto; background: var(--background); padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 9px; font-size: 11px; }
 .text :not(pre) > code { background: var(--accent); padding: 1px 4px; border-radius: 4px; }
-.text .katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; font-size: .9em; }
+.text :global(.katex-display) { overflow-x: auto; overflow-y: hidden; padding: 4px 0; font-size: .9em; }
 .text table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 8px 0; }
 .text th, .text td { border: 1px solid var(--border); padding: 4px 6px; }
 
@@ -77,3 +77,6 @@
 .lab summary { cursor: pointer; padding: 6px 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .thinking svg { animation: none; } }
+
+.text ul { list-style: disc; }
+.text ol { list-style: decimal; }
