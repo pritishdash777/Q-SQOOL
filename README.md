@@ -150,3 +150,45 @@ checks, remaining configuration and demonstration sequence. Progress now uses
 updated backend before the frontend. Streaks use actual learning advances recorded
 on UTC days; existing streak history is not fabricated. No deployment was performed
 as part of the audit.
+
+## Enable q-ai with Groq
+
+q-ai answers open-ended quantum computing questions through a server-side Groq
+chat endpoint, including follow-ups, worked examples, code, and quizzes. The
+floating chat and interactive gate lab are available on every page.
+
+1. Create an API key at https://console.groq.com/keys.
+2. Add these to the existing root `.env.local` (keep your other settings):
+
+   ```dotenv
+   GROQ_API_KEY=your-groq-key
+   GROQ_MODEL=openai/gpt-oss-120b
+   ```
+
+3. Restart `npm run dev`. Open q-ai and ask about Shor’s algorithm, then ask a
+   follow-up such as “show me an example factoring 15.”
+4. For deployment, set the same **server-side** variables on the Next.js host
+   and redeploy. The host must run Next.js route handlers; a static export alone
+   cannot serve `/api/q-ai`. No Python backend change is needed.
+
+Never prefix the key with `NEXT_PUBLIC_`, commit it, or paste it into the chat.
+`GET /api/q-ai` reports whether a key is configured (not whether it is valid).
+Without a valid key, q-ai shows a connection error rather than substituting canned
+answers. The local gate experiment remains available. Model names can be changed
+using `GROQ_MODEL`; see [Groq’s models](https://console.groq.com/docs/models) and
+[chat API documentation](https://console.groq.com/docs/text-chat).
+
+Conversation history is kept in memory, survives in-app navigation, and clears
+on refresh or New chat. Up to 20 recent messages / 24,000 characters are sent to
+Groq with each question; chats are not saved in the app database. Questions allow
+4,000 characters. AI output is rendered as text and code, never executable HTML.
+Stop and New chat cancel outstanding requests; failures can be retried. Replies
+that hit the output limit offer a Continue button. This integration does not
+browse the web or execute generated code.
+
+The public guest endpoint caps input size, output tokens, concurrent requests
+(4), and requests per minute (30 per server process). These are basic shared
+limits, not a distributed per-user quota; configure hosting-level rate limits
+and Groq project spend limits for a public multi-instance deployment. Neither
+credentials nor provider error bodies are returned to browsers. See Groq’s data
+policy for provider-side handling of messages.

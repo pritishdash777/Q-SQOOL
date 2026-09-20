@@ -25,7 +25,7 @@
 .actions button { display: flex; align-items: center; gap: 4px; }
 .widget button:hover { filter: brightness(1.12); }
 .widget button:disabled { opacity: .4; cursor: default; }
-.widget button:focus-visible, .widget input:focus-visible, .widget a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.widget button:focus-visible, .widget input:focus-visible, .widget textarea:focus-visible, .widget a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .state { font-family: ui-monospace, monospace; font-size: 12px; padding: 6px 0; color: var(--primary); }
 .probability { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 11px; }
 .probability > span:first-child { min-width: 38px; }
@@ -41,10 +41,24 @@
 .suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 14px; border-top: 1px solid var(--border); }
 .suggestions button { border-radius: 100px; color: var(--primary); font-size: 10px; }
 .form { display: flex; align-items: center; margin: 0 13px; padding: 5px; border: 1px solid var(--border); border-radius: 13px; background: var(--background); }
-.form input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--foreground); padding: 8px; font-size: 13px; border-radius: 8px; }
-.form input::placeholder { color: var(--muted-foreground); }
+.form textarea { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--foreground); padding: 8px; font-size: 13px; border-radius: 8px; }
+.form textarea::placeholder { color: var(--muted-foreground); }
 .form button { display: grid; place-items: center; width: 32px; height: 32px; background: var(--primary); color: var(--primary-foreground); border: 0; border-radius: 9px; cursor: pointer; }
 .footer { text-align: center; padding: 8px 10px 10px; font-size: 9px; color: var(--muted-foreground); }
 @keyframes arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 480px) { .widget { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); } .panel { width: calc(100vw - 24px); height: min(610px, calc(100dvh - 90px)); } .form input { font-size: 16px; } }
+@media (max-width: 480px) { .widget { left: 12px; bottom: max(12px, env(safe-area-inset-bottom)); } .panel { width: calc(100vw - 24px); height: min(610px, calc(100dvh - 90px)); } .form textarea { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .panel { animation: none; } .launcher, .probability i { transition: none; } }
+
+.form textarea { resize: vertical; min-height: 56px; max-height: 120px; }
+.code { white-space: pre; overflow-x: auto; background: var(--background); padding: 12px; margin: 10px 0; border: 1px solid var(--border); border-radius: 9px; font-size: 11px; }
+.text > span > code { background: var(--accent); padding: 1px 4px; border-radius: 4px; }
+.notice, .error { font-size: 12px; padding: 10px 14px; background: var(--accent); }
+.error { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; }
+.error p { margin: 0 0 8px; }
+.error button, .continue { display: inline-flex; align-items: center; background: var(--card); color: var(--primary); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+.thinking { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); padding-bottom: 14px; }
+.thinking svg { animation: spin 1s linear infinite; }
+.lab { margin: 8px 0 14px; font-size: 11px; color: var(--muted-foreground); }
+.lab summary { cursor: pointer; padding: 6px 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .thinking svg { animation: none; } }
