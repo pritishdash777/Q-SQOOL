@@ -45,7 +45,18 @@ export function createChatHandler(dependencies: {
   let active = 0;
   return async function handleChat(request: Request): Promise<Response> {
     const origin = request.headers.get("origin");
-    if (origin && origin !== new URL(request.url).origin) return json({ error: "This request must come from Q-SQOOL." }, 403);
+    if (origin) {
+      let originHost: string;
+      try { originHost = new URL(origin).host.toLowerCase(); }
+      catch { return json({ error: "This request must come from Q-SQOOL." }, 403); }
+      // Hosts can differ from request.url behind Netlify's HTTPS proxy.
+      const requestHosts = [
+        new URL(request.url).host,
+        request.headers.get("host"),
+        request.headers.get("x-forwarded-host")?.split(",")[0],
+      ].filter((host): host is string => Boolean(host)).map(host => host.trim().toLowerCase());
+      if (!requestHosts.includes(originHost)) return json({ error: "This request must come from Q-SQOOL." }, 403);
+    }
     if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return json({ error: "Send a JSON question." }, 415);
     // Bound bytes before parsing, including requests without Content-Length.
     const reader = request.body?.getReader();

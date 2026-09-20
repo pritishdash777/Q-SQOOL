@@ -28,6 +28,17 @@ test('missing credentials, forged roles, cross-origin requests and excessive inp
   assert.equal((await handler(request([{ role: 'user', content: 'x'.repeat(4001) }]))).status, 400);
   assert.equal((await handler(request([{ role: 'user', content: 'x'.repeat(110000) }]))).status, 413);
 });
+test('accepts the public origin when Netlify forwards requests through an internal URL', async () => {
+  const handler = createChatHandler({ config, fetch: async () => Response.json({ choices: [{ message: { content: 'A qubit stores quantum information.' }, finish_reason: 'stop' }] }) });
+  const proxied = new Request('http://internal.netlify/api/q-ai', {
+    method: 'POST',
+    headers: { origin: 'https://q-sqool.netlify.app', host: 'internal.netlify', 'x-forwarded-host': 'q-sqool.netlify.app', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: [{ role: 'user', content: 'What is a qubit?' }] }),
+  });
+  assert.equal((await handler(proxied)).status, 200);
+  const hostile = new Request('http://internal.netlify/api/q-ai', { method: 'POST', headers: { origin: 'https://other.example', host: 'internal.netlify', 'x-forwarded-host': 'q-sqool.netlify.app', 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: [{ role: 'user', content: 'What is a qubit?' }] }) });
+  assert.equal((await handler(hostile)).status, 403);
+});
 test('provider errors are sanitized, empty answers fail, and truncated replies are marked', async () => {
   for (const status of [401, 429, 500]) {
     const handler = createChatHandler({ config, fetch: async () => new Response('private upstream error test-secret', { status }) });
