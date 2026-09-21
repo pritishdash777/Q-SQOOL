@@ -41,3 +41,13 @@
 .prediction button[aria-pressed=true] { background: var(--primary); color: var(--primary-foreground); }
 .truthTable > div, .truthTable > button { display: grid; grid-template-columns: .5fr .5fr 1fr 1.4fr; width: 100%; gap: 8px; font-size: 11px; padding: 10px 6px; text-align: center; }
 .truthTable > button { margin: 5px 0; }
+.recommendations { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
+.recommendations article { display: flex; flex-direction: column; align-items: start; padding: 20px; background: var(--card); border: 1px solid var(--border); border-radius: 15px; }
+.recommendations article > p { font-size: 13px; line-height: 1.65; color: var(--muted-foreground); margin: 10px 0; }
+.recommendations small { font-size: 11px; color: var(--muted-foreground); margin-bottom: 12px; }
+.recommendations article > button { margin-top: auto; width: 100%; }
+.prerequisites { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 0 0 14px; font-size: 11px; }
+.prerequisites button { padding: 4px 7px; font-size: 10px; }
+.feedback > div { flex: 1; min-width: 200px; }
+.feedback a { color: var(--primary); text-decoration: underline; font-weight: 600; }
+@media (max-width: 760px) { .recommendations { grid-template-columns: 1fr; } }

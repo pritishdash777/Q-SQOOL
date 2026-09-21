@@ -1,3 +1,4 @@
+import { learningTrack } from "./learning-tracks";
 import { learningModules } from "./curriculum";
 import { normalizeProgress } from "./progress-storage";
 import type { UserProgress } from "./progress-types";
@@ -19,11 +20,16 @@ export function learningSummary(progress: UserProgress | null, now = new Date())
 
 export function recommendedModules(progress: UserProgress | null, role = "Student", assessmentScore?: number) {
   const modules = progress?.modules || {};
-  return learningModules.filter(module => !modules[module.id]?.completed && module.prereqs.every(id => (modules[id]?.percent || 0) >= 60))
+  const track = learningTrack(role);
+  const foundationFirst = assessmentScore !== undefined && assessmentScore < 2;
+  const ordered = foundationFirst
+    ? ["qubits", ...track.order.filter(id => learningModules.find(module => module.id === id)?.category === "Foundation"), ...track.order]
+    : track.order;
+  const order = [...new Set(ordered)];
+  // Prerequisites are visible guidance, not a filter that makes every role identical.
+  return learningModules.filter(module => !modules[module.id]?.completed)
     .sort((a, b) => {
-      const score = (module: typeof a) => (modules[module.id]?.percent || 0) +
-        (assessmentScore !== undefined && assessmentScore < 2 && module.category === "Foundation" ? 200 :
-          role === "Researcher" && module.category === "Algorithm" ? 100 : role === "Professional" && ["circuits", "vqe-qaoa"].includes(module.id) ? 100 : 0);
-      return score(b) - score(a);
+      const rank = (id: string) => order.indexOf(id) - ((modules[id]?.percent || 0) > 0 ? 20 : 0);
+      return rank(a.id) - rank(b.id);
     }).slice(0, 3);
 }

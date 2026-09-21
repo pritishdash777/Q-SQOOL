@@ -215,3 +215,11 @@ activity timestamp are removed, and simulator status no longer displays invented
 percentages. `/playground` opens the account-aware Composer instead of using a
 hardcoded test identity. Existing real lessons, projects, and account records
 are retained. No demo progress is seeded; practice starts unsolved.
+
+Learning roles now select distinct tracks immediately: Student emphasises
+foundations, Researcher emphasises entanglement/phase/measurement, and Professional
+emphasises circuit workflows and applications. Recommendations exclude completed
+lessons and prioritise unfinished work. Low assessment scores add a foundation
+refresher within the selected track. Prerequisites are visible links rather than
+locks, so a new user can explore every role. Changing roles updates the path,
+experiment and AI planning context without adding any progress or XP.

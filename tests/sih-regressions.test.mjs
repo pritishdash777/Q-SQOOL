@@ -41,10 +41,10 @@ test('guidance does not remove measurement after a state-changing gate or invent
   assert.ok(analyseCircuit({ qubits: 1, gates: [] }, 'Detect Errors', 'Beginner').text.includes('automatically measures'));
 });
 
-test('progress summary uses UTC activity and real completion, and recommendations respect prerequisites', () => {
+test('progress summary uses UTC activity and real completion, and recommendations follow learning tracks', () => {
   const p = createEmptyProgress('A');
   assert.equal(learningSummary(p).streak, 0);
-  assert.deepEqual(recommendedModules(p).map(m => m.id), ['qubits']);
+  assert.deepEqual(recommendedModules(p).map(m => m.id), ['qubits', 'superposition', 'gates']);
   p.activityDays = ['2026-09-17', '2026-09-18'];
   assert.equal(learningSummary(p, new Date('2026-09-19T18:29:59Z')).streak, 2);
   assert.equal(learningSummary(p, new Date('2026-09-20T00:00:00Z')).streak, 0);
@@ -52,7 +52,7 @@ test('progress summary uses UTC activity and real completion, and recommendation
   p.xp = 9999;
   const s = learningSummary(p);
   assert.equal(s.xp, 100); assert.equal(s.mastery, Math.round(100 / s.total));
-  assert.deepEqual(recommendedModules(p).map(m => m.id), ['superposition', 'gates']);
+  assert.deepEqual(recommendedModules(p).map(m => m.id), ['superposition', 'gates', 'measurement']);
 });
 
 test('server resume wins over clean stale cache while pending edits retain their destination', () => {
