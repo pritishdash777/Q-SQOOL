@@ -1,3 +1,4 @@
+import { labContextSchema, coachInstructions, extractProposal } from "./lab-coach";
 // Server entry point: imported only by app/api/q-ai/route.ts.
 import { z } from "zod";
 import { topicForPath } from "./q-ai";
@@ -8,6 +9,7 @@ const payloadSchema = z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string().trim().min(1).max(16000),
   }).strict()).min(1).max(20),
+  lab: labContextSchema.optional(),
   page: z.string().max(200).regex(/^\/[a-zA-Z0-9/_-]*$/).optional(),
 }).strict().superRefine(({ messages }, context) => {
   if (messages[0]?.role !== "user" || messages.at(-1)?.role !== "user") context.addIssue({ code: "custom", message: "Conversation must start and end with a user question." });
@@ -99,7 +101,8 @@ export function createChatHandler(dependencies: {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model,
-          messages: [{ role: "system", content: systemPrompt + (topic ? `\nThe learner is viewing the ${topic.title} lesson. Reference concept: ${topic.concept}` : "") }, ...body.data.messages],
+          messages: [{ role: "system", content: systemPrompt + (body.data.lab ? coachInstructions(body.data.lab) : "") + (topic ? `\nThe learner is viewing the ${topic.title} lesson. Reference concept: ${topic.concept}` : "") }, ...body.data.messages],
+          ...(body.data.lab ? { response_format: { type: "json_object" } } : {}),
           temperature: 0.35,
           max_completion_tokens: 2048,
           stream: false,
@@ -119,7 +122,8 @@ export function createChatHandler(dependencies: {
       const choice = data?.choices?.[0];
       const text = choice?.message?.content;
       if (typeof text !== "string" || !text.trim()) return json({ error: "q-ai returned an empty answer. Please retry." }, 502);
-      return json({ text: text.trim(), truncated: choice.finish_reason === "length" });
+      if (body.data.lab && choice.finish_reason === "length") return json({ error: "The circuit response was too long. Ask for a smaller circuit or one step at a time." }, 502);
+      return json({ ...(body.data.lab && choice.finish_reason !== "length" ? extractProposal(text.trim()) : { text: text.trim() }), truncated: choice.finish_reason === "length" });
     } catch {
       if (request.signal.aborted) return json({ error: "Response stopped." }, 499);
       if (timeout.aborted) return json({ error: "q-ai took too long to respond. Please retry." }, 504);

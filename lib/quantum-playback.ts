@@ -166,7 +166,7 @@ export function buildPlayback(circuit: Circuit, result: DemoResult, replay = 0):
         model.measurementStart = model.frames.length;
         // Counts describe classical bits, not a statevector. Only use them to choose
         // a terminal shot; mid-circuit measurement histories are not returned by Aer.
-        if (!model.hasMidCircuitMeasurement && result.simulator === "qiskit_aer") {
+        if (!model.hasMidCircuitMeasurement && ["qiskit_aer", "cirq", "pennylane"].includes(result.simulator ?? "")) {
           const measuredMask = operations.filter(g => g.type === "M").reduce((mask, g) => mask | (1 << g.qubit), 0);
           const observed = result.counts ?? result.probabilities;
           const candidates = Object.entries(observed).filter(([bits, weight]) => {

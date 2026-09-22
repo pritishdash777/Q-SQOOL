@@ -1,7 +1,7 @@
 # Q-SQOOL API
 
 FastAPI provides authentication, profiles, learning progress, saved projects,
-collaboration, Qiskit Aer simulation and circuit optimization.
+collaboration, Qiskit Aer/Cirq/PennyLane simulation and circuit optimization.
 
 Run commands from the **repository root**, so the default SQLite path is consistent.
 Python 3.11+ is recommended.
@@ -67,3 +67,21 @@ identity/challenge tables. No existing user data needs to be reset.
 Google login never accepts an email/profile supplied by the browser as identity.
 An existing email requires password confirmation before linking. No Gmail scopes,
 Google refresh tokens, client secrets, or OAuth redirect routes are used.
+
+## SDK execution
+
+`POST /api/simulate` accepts `simulator: "qiskit_aer" | "cirq" | "pennylane"`.
+Each selection runs its native simulator; there is no fallback to another SDK.
+Redeploy the Python service with the updated `backend/requirements.txt` when
+adding these backends (a frontend-only Netlify deploy does not install Python SDKs).
+All engines support 1–5 qubits, up to 256 operations, and 1–4096 shots.
+Counts use c[n-1]…c[0]. M writes q[i] into c[i]; the last measurement on each
+wire wins, unmeasured classical bits remain zero, and circuits without M
+receive terminal measurement on every wire. The playback's intermediate states
+remain explicitly labelled local ideal calculations.
+
+The Composer live AI coach uses the existing server-side Groq configuration.
+Live mode is opt-in, debounced, limited to one automatic request per 12 seconds
+and ten updates per activation. It sends circuit JSON, current sampled counts,
+response style and actual completed module IDs. Validated proposals require
+Apply, use Composer undo, and are never presented as executed results.

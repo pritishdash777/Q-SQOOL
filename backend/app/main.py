@@ -81,10 +81,11 @@ async def health():
     "/api/simulate",
     response_model=SimulationResponse,
 )
-async def simulate(request: SimulateRequest):
+def simulate(request: SimulateRequest):
     return simulate_circuit(
         request.circuit,
         request.shots,
+        request.simulator,
     )
 
 @app.post("/api/optimize")

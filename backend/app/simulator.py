@@ -169,7 +169,7 @@ def build_qiskit_circuit(circuit: Circuit) -> QuantumCircuit:
     return qc
 
 
-def simulate_circuit(circuit: Circuit, shots: int) -> dict:
+def simulate_circuit(circuit: Circuit, shots: int, backend: str = "qiskit_aer") -> dict:
     if shots < 1 or shots > MAX_SHOTS:
         raise SimulationError(
             "INVALID_SHOTS",
@@ -177,6 +177,10 @@ def simulate_circuit(circuit: Circuit, shots: int) -> dict:
         )
 
     qc = build_qiskit_circuit(circuit)
+
+    if backend != "qiskit_aer":
+        from .sdk_simulators import simulate_sdk
+        return simulate_sdk(circuit, shots, backend)
 
     simulator = AerSimulator()
 

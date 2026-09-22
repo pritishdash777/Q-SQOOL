@@ -43,7 +43,7 @@ class SimulateRequest(BaseModel):
 
     circuit: Circuit
     shots: int = Field(ge=1, le=4096, strict=True)
-    simulator: Literal["qiskit_aer"] = "qiskit_aer"
+    simulator: Literal["qiskit_aer", "cirq", "pennylane"] = "qiskit_aer"
 
 
 class SimulationResponse(BaseModel):

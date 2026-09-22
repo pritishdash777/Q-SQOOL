@@ -12,3 +12,5 @@ email-validator
 psycopg[binary]
 httpx
 google-auth[requests]>=2.40,<3
+cirq-core==1.6.1
+pennylane==0.43.3

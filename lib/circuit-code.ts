@@ -5,6 +5,20 @@ export function generateCode(circuit: Circuit, sdk: SDK): string {
   const error = validateCircuit(circuit);
   if (error) throw new Error(error);
   const gates = orderedGates(circuit);
+  if (sdk === "PennyLane") {
+    const names: Record<string, string> = { X: "PauliX", Y: "PauliY", Z: "PauliZ", H: "Hadamard", CX: "CNOT" };
+    const measured = [...new Set(gates.filter(g => g.type === "M").map(g => g.qubit))].sort((a, b) => b - a);
+    const wires = Array.from({ length: circuit.qubits }, (_, i) => circuit.qubits - 1 - i);
+    return ["import pennylane as qml", "import numpy as np", "from collections import Counter", "",
+      `wires = ${JSON.stringify(wires)}`, 'dev = qml.device("default.qubit", wires=wires)', "",
+      "@qml.set_shots(1024)", '@qml.qnode(dev, mcm_method="tree-traversal")', "def circuit():", "    last = {}",
+      ...gates.map(g => g.type === "M" ? `    last[${g.qubit}] = qml.measure(${g.qubit})` :
+        `    qml.${names[g.type] ?? g.type}(${g.angle !== undefined ? `${g.angle}, ` : ""}wires=${g.target !== undefined ? `[${g.qubit}, ${g.target}]` : g.qubit})`),
+      measured.length ? `    return qml.sample([${measured.map(q => `last[${q}]`).join(", ")}])` : "    return qml.sample(wires=wires)", "",
+      `measured = ${JSON.stringify(measured.length ? measured : wires)}`, "samples = np.asarray(circuit()).reshape(1024, len(measured))",
+      "positions = {q: i for i, q in enumerate(measured)}", "# q0 is rightmost; unmeasured classical bits stay zero.",
+      'counts = Counter("".join(str(int(row[positions[q]])) if q in positions else "0" for q in wires) for row in samples)', "print(dict(counts))"].join("\n");
+  }
   if (sdk === "Qiskit") return ["from qiskit import QuantumCircuit", "", `qc = QuantumCircuit(${circuit.qubits}, ${circuit.qubits})`, ...gates.map(g => g.type === "M" ? `qc.measure(${g.qubit}, ${g.qubit})` : `qc.${g.type.toLowerCase()}(${g.angle !== undefined ? `${g.angle}, ` : ""}${g.qubit}${g.target !== undefined ? `, ${g.target}` : ""})`)].join("\n");
   if (sdk === "Cirq") return ["import cirq", "", `q = cirq.LineQubit.range(${circuit.qubits})`, "circuit = cirq.Circuit(", ...gates.map(g => `  ${g.type === "M" ? `cirq.measure(q[${g.qubit}], key="m${g.id}")` : g.angle !== undefined ? `cirq.${g.type.toLowerCase()}(${g.angle})(q[${g.qubit}])` : `cirq.${g.type === "CX" ? "CNOT" : g.type}(q[${g.qubit}]${g.target !== undefined ? `, q[${g.target}]` : ""})`},`), ")"].join("\n");
   return ["OPENQASM 3;", 'include "stdgates.inc";', `qubit[${circuit.qubits}] q;`, `bit[${circuit.qubits}] c;`, "", ...gates.map(g => g.type === "M" ? `c[${g.qubit}] = measure q[${g.qubit}];` : `${g.type.toLowerCase()}${g.angle !== undefined ? `(${g.angle})` : ""} q[${g.qubit}]${g.target !== undefined ? `, q[${g.target}]` : ""};`)].join("\n");
@@ -12,6 +26,7 @@ export function generateCode(circuit: Circuit, sdk: SDK): string {
 
 // Deliberately bounded grammar: no eval, arbitrary Python, loops or classical remapping.
 export function parseCode(code: string, sdk: SDK): { circuit?: Circuit; warning?: string } {
+  if (sdk === "PennyLane") return { warning: "PennyLane export is ready to run in Python. Edit the visual circuit to regenerate it; Python import is not supported." };
   if (code.length > 100000) return { warning: "Code exceeds the 100 KB import limit." };
   let qubits = 0, classical: number | undefined, wrapper = 0;
   const gates: CircuitGate[] = [];

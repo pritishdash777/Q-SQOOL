@@ -2,7 +2,7 @@ export type Page = "landing" | "dashboard" | "learning" | "lesson" | "algorithms
 export type GateName = "X" | "Y" | "Z" | "H" | "S" | "T" | "RX" | "RY" | "RZ" | "CX" | "CZ" | "M";
 export type CircuitGate = { id: number; type: GateName; qubit: number; target?: number; column: number; angle?: number };
 export type Circuit = { qubits: number; gates: CircuitGate[] };
-export type SDK = "Qiskit" | "Cirq" | "OpenQASM";
+export type SDK = "Qiskit" | "Cirq" | "PennyLane" | "OpenQASM";
 export type RunState = "initial" | "queued" | "running" | "completed" | "failed";
 export type DemoResult = { name: string; probabilities: Record<string, number>; note: string; counts?: Record<string, number>; executionMs?: number; simulator?: string };
 export type ResultsTab = "Histogram" | "Probabilities" | "Statevector" | "Phase" | "Bloch sphere" | "Density matrix" | "Execution stepper";
@@ -11,3 +11,6 @@ export type AILevel = "Beginner" | "Technical";
 export type AIAnalysis = { title: string; text: string; gateIds: number[]; before: Circuit; after: Circuit; warning?: string; reductionPercent?: number };
 export type ProjectVersion = { id: number; savedAt: string; circuit: Circuit };
 export type LocalProject = { id: number | string; cloudId?: string; permission?: "owner" | "edit" | "view"; name: string; updatedAt: string; circuit: Circuit; versions: ProjectVersion[] };
+
+export type Backend = "qiskit_aer" | "cirq" | "pennylane";
+export type ExecutionSnapshot = { fingerprint: string; result: DemoResult };
